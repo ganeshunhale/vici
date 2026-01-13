@@ -4,7 +4,7 @@ import { store } from "./store";
 
 import { Layout } from "@/components/Layout";
 import Dashboard from "@/pages/Dashboard";
-import DashboardLoader from "./services/DashboardLoader";
+import Selective from "./pages/Selective";
 
 function NotFound() {
   return (
@@ -19,9 +19,9 @@ function App() {
     <Provider store={store}>
       <BrowserRouter>
         <Layout>
-        <DashboardLoader />
           <Routes>
             <Route path="/" element={<Dashboard />} />
+            <Route path="/selective" element={<Selective />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Layout>

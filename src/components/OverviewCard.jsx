@@ -1,3 +1,5 @@
+import { StatSparkline } from "./SparkLineChart";
+
 export function OverviewCard({
   label,
   value,
@@ -17,39 +19,29 @@ export function OverviewCard({
     amber: "text-amber-400",
     slate: "text-slate-400",
   };
-
+  const totalDialsData = [
+    { value: 120 },
+    { value: 180 },
+    { value: 160 },
+    { value: 220 },
+    { value: 210 },
+    { value: 260 },
+    { value: 300 },
+    { value: 280 },
+  ];
   return (
-    <div className={`border rounded-lg h-24 flex-1 flex flex-col ${colorClasses[color]}`}>
-      {/* <div className="flex-1 h-full flex flex-col">   */}
-        {/* ICON — SEPARATE COLUMN */}
-        {/* <div className="w-1/4 flex items-center justify-center p-4">
-          <Icon className={`w-10 h-10 ${iconColorClasses[color]}`} />
-        </div> */}
-
-        {/* DATA COLUMN */}
-        {/* <div className=" flex flex-col"> */}
-          {/* DATA CONTENT */}
-          <div className="p-1">
-            <p className="text-xs font-semibold text-slate-300 uppercase tracking-wide">
+    <div className={`h-[7rem] min-w-[11rem] flex flex-col border border-border rounded-md bg-card/60 shadow-[0_8px_30px_rgba(0,0,0,0.45)]`}>
+     
+          <div className="p-1 m-2">
+            <p className="text-xs mt-1 font-semibold text-slate-300 uppercase text-nowrap display-block">
               {label}
             </p>
 
             <div className="text-xl font-bold font-mono text-white mt-1">
               {value}
             </div>
+            <StatSparkline data={totalDialsData} />
           </div>
-
-          {/* TREND — ONLY UNDER DATA */}
-          {/* {trend && (
-  <div className="border-t border-slate-700/60 bg-slate-800/40 px-4 py-2">
-    <p className="text-xs text-slate-400">
-      <span className="text-slate-300 font-medium">+ {trend}</span>{" "}
-      {trendDesc}
-    </p>
-  </div>
-)} */}
-        {/* </div> */}
-      {/* </div> */}
     </div>
   );
 }

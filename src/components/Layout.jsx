@@ -5,7 +5,7 @@ export function Layout({ children }) {
     <div className="min-h-screen bg-background text-foreground">
       <TopNav />
 
-      <main className="mx-auto max-w-[1440px] min-h-[1024px] px-6 py-8">
+      <main className="mx-2 2xl:mx-auto max-w-[1440px] 2xl:max-w-[1600px] min-h-[1024px] py-4">
         {children}
       </main>
     </div>

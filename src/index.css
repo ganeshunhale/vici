@@ -7,49 +7,83 @@
 @layer base {
   :root {
     /* Dark Mode Theme Variables - Deep Blue/Black Dashboard Style */
-    --background: 222 47% 11%;     /* #0f172a - slate-950 */
-    --foreground: 210 40% 98%;     /* #f8fafc - slate-50 */
+    --background: 231 58% 6%;     /* #070B1A */
+    --foreground: 220 40% 98%;    /* near-white */
 
-    --card: 222 47% 11%;
-    --card-foreground: 210 40% 98%;
+    --card: 229 56% 13%;          /* #0E1633 */
+    --card-foreground: 220 40% 98%;
 
-    --popover: 222 47% 11%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 229 56% 13%;
+    --popover-foreground: 220 40% 98%;
 
-    --primary: 217 91% 60%;        /* Bright Blue */
-    --primary-foreground: 222 47% 11%;
+    /* === Primary Accent === */
+    --primary: 220 100% 59%;      /* #2F7BFF */
+    --primary-foreground: 231 58% 6%;
 
-    --secondary: 217 33% 17%;      /* slate-900 */
-    --secondary-foreground: 210 40% 98%;
+    /* === Secondary / Muted === */
+    --secondary: 228 49% 15%;     /* slightly lighter than card */
+    --secondary-foreground: 220 40% 98%;
 
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%; /* slate-400 */
+    --muted: 228 49% 15%;
+    --muted-foreground: 220 15% 65%;
 
-    --accent: 199 89% 48%;         /* Cyan/Blue Accent */
-    --accent-foreground: 210 40% 98%;
+    /* === Accent === */
+    --accent: 220 100% 59%;       /* same as primary */
+    --accent-foreground: 220 40% 98%;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
+    /* === Status Colors === */
+    --destructive: 0 100% 64%;    /* #FF4D4F */
+    --destructive-foreground: 220 40% 98%;
 
-    --border: 217 33% 20%;         /* slate-800 */
-    --input: 217 33% 20%;
-    --ring: 212.7 26.8% 83.9%;
+    --status-active: 158 100% 41%; /* #00D084 */
+    --status-waiting: 39 90% 56%;  /* #F5A623 */
+    --status-offline: 220 15% 45%;
+
+    /* === Borders / Inputs === */
+    --border: 220 49% 22%;        /* #1B2A52 */
+    --input: 220 49% 22%;
+    --ring: 220 100% 59%;
 
     --radius: 0.5rem;
 
-    /* Custom Status Colors */
-    --status-active: 142 71% 45%;  /* Emerald */
-    --status-ringing: 217 91% 60%; /* Blue */
-    --status-waiting: 45 93% 47%;  /* Amber */
-    --status-offline: 215 16% 47%; /* Slate */
-
-    /* Fonts */
+    /* === Fonts === */
     --font-sans: 'Inter', sans-serif;
     --font-display: 'Space Grotesk', sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
   }
 }
+@layer utilities {
+  /* Firefox */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
 
+  /* Chrome / Edge / Safari */
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 2px;
+    height: 2px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--border));
+    border-radius: 9999px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--primary));
+  }
+  .scrollbar-auto-hide::-webkit-scrollbar-thumb {
+    background-color: transparent;
+  }
+  .scrollbar-auto-hide:hover::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--border));
+  }
+}
 @layer base {
   * {
     @apply border-border;
@@ -91,4 +125,57 @@
   .text-glow {
     text-shadow: 0 0 10px currentColor;
   }
+}
+
+
+.dark-datepicker .react-datepicker {
+  background-color: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  color: hsl(var(--foreground));
+  font-family: var(--font-sans);
+}
+
+.dark-datepicker .react-datepicker__header {
+  background-color: hsl(var(--secondary));
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.dark-datepicker .react-datepicker__current-month,
+.dark-datepicker .react-datepicker__day-name,
+.dark-datepicker .react-datepicker__time-name {
+  color: hsl(var(--foreground));
+  font-weight: 500;
+}
+
+.dark-datepicker .react-datepicker__day {
+  color: hsl(var(--muted-foreground));
+  border-radius: var(--radius);
+  transition: background-color 0.15s ease;
+}
+
+.dark-datepicker .react-datepicker__day:hover {
+  background-color: hsl(var(--secondary));
+}
+
+.dark-datepicker .react-datepicker__day--selected,
+.dark-datepicker .react-datepicker__day--keyboard-selected {
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+.dark-datepicker .react-datepicker__day--today {
+  border: 1px solid hsl(var(--primary));
+}
+
+.dark-datepicker .react-datepicker__day--disabled {
+  color: hsl(var(--status-offline));
+  cursor: not-allowed;
+}
+
+.dark-datepicker .react-datepicker__navigation-icon::before {
+  border-color: hsl(var(--foreground));
+}
+
+.dark-datepicker .react-datepicker__triangle {
+  display: none;
 }

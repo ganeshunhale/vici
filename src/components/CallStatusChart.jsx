@@ -15,8 +15,23 @@ const STATUS_COLORS = {
   INCALL: '#8b5cf6',
 };
 
-export function CallStatusChart({ callStatus }) {
-  const { total, breakdown } = callStatus;
+export function CallStatusChart({ callStatus ,CallStatusLoading = true}) {
+  // const { total, breakdown } = callStatus;
+    const rows = callStatus?.data?.[0] ?? {};
+    
+    // Identify the total key (key containing 'Total', case-insensitive)
+    const totalKey = Object.keys(rows).find((key) => /total/i.test(key));
+  
+    // Prepare the breakdown excluding the total
+    const breakdown = Object.entries(rows)
+      .filter(([key]) => key !== totalKey)
+      .map(([name, value]) => ({ name, value }));
+  
+      let total = rows[totalKey] ?? 0;
+    console.log("Call Status Rows:", rows);
+    console.log("Total Key:", totalKey);
+  
+    
 
   const data = useMemo(() => {
     return breakdown
@@ -32,9 +47,13 @@ export function CallStatusChart({ callStatus }) {
     data.find(item => item.name === 'INCALL')?.value ?? 0;
 
   const hasData = data.length > 0;
-
-  return (
-    <div className="relative w-full h-[220px]">
+return CallStatusLoading ? (
+    <div className="flex items-center justify-center h-[220px]">
+      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+    </div>
+  ) :
+   (
+    <div className="relative w-full h-[200px]">
       {/* CENTER LABEL */}
       {/* <div className="absolute inset-5 mb-14 flex flex-col items-center justify-center pointer-events-none z-10">
         <div className="text-3xl font-bold font-mono text-white">
@@ -88,7 +107,9 @@ export function CallStatusChart({ callStatus }) {
             }}
           />
         </PieChart>
+        
       </ResponsiveContainer>
+     
     </div>
   );
 }

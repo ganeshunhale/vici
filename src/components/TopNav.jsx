@@ -1,9 +1,17 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { BarChart, ChevronDown, Settings } from "lucide-react";
 
 export default function TopNav() {
-  const now = new Date();
+  const [now, setNow] = useState(new Date());
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setNow(new Date());
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <header className="sticky top-0 z-50 h-16 border-b border-border bg-gradient-to-b from-slate-900/80 to-slate-950/80 backdrop-blur-md">
@@ -16,15 +24,15 @@ export default function TopNav() {
             cc
           </div>
           <BarChart className="w-5 h-5 text-green-500" />
-          <h1 className="text-sm font-semibold tracking-tight">
+          <h1 className="text-base font-semibold tracking-tight">
             Outbound Dialer – Admin
           </h1>
         {/* </div> */}
 
         {/* CENTER (TRUE CENTER) */}
         {/* <div className="absolute left-1/4 -translate-x-1/2 hidden md:flex items-center gap-3"> */}
-          <Dropdown label="All Campaigns" items={["All Campaigns", "Inbound", "Outbound"]} />
-          <Dropdown label="Today" items={["Today", "Yesterday", "Last 7 Days"]} />
+          {/* <Dropdown label="All Campaigns" items={["All Campaigns", "Inbound", "Outbound"]} />
+          <Dropdown label="Today" items={["Today", "Yesterday", "Last 7 Days"]} /> */}
         </div>
 
         {/* RIGHT */}
@@ -46,9 +54,9 @@ export default function TopNav() {
             </div>
           </div>
 
-          <button className="p-2 rounded-md hover:bg-slate-800/60 transition">
+          {/* <button className="p-2 rounded-md hover:bg-slate-800/60 transition">
             <Settings className="w-4 h-4 text-muted-foreground" />
-          </button>
+          </button> */}
         </div>
 
       </div>

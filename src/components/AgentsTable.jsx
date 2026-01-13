@@ -1,54 +1,173 @@
-import { Users} from 'lucide-react';
+import { Users } from "lucide-react";
+import { AgGridReact } from "ag-grid-react";
+import { AllCommunityModule, ModuleRegistry, themeQuartz } from "ag-grid-community";
+import { useMemo } from "react";
+import { useGetAgentsProductivityQuery } from "../services/dashboardApi";
 
-export function AgentsTable({ data }) {
+
+ModuleRegistry.registerModules([AllCommunityModule]);
+
+export function AgentsTable() {
+  const { data = [] } =
+      useGetAgentsProductivityQuery(undefined, {
+        pollingInterval:  30000,
+        skipPollingIfUnfocused: true,
+      });
+  const rowData = data?.data || [];
+  const hhmmssToMinutes = (time) => {
+    if (!time) return 0;
+    const [hh, mm, ss] = time.split(":").map(Number);
+    return hh * 60 + mm + ss / 60;
+  };
+  const StatusRenderer = (params) => {
+    const status = params.value;
+    const talkTime = params.data?.TALK_TIME_HH_MM_SS;
+  
+    const minutes = hhmmssToMinutes(talkTime);
+  
+    let className =
+      "px-2 py-1 rounded text-xs font-semibold whitespace-nowrap";
+  
+    if (status === "PAUSED") {
+      if (minutes < 3) {
+        className += " bg-emerald-500/20 text-emerald-400";
+      } else if (minutes <= 10) {
+        className += " bg-amber-500/20 text-amber-400";
+      } else {
+        className +=
+          " bg-red-500/20 text-red-400 animate-pulse";
+      }
+    } else {
+      const statusClasses = {
+        READY: " bg-emerald-500/25 text-emerald-300",
+        INCALL: " bg-blue-500/20 text-blue-400",
+        OFFLINE: " bg-slate-500/20 text-slate-400",
+      };
+  
+      className += statusClasses[status] ||
+        " bg-slate-600/20 text-slate-300";
+    }
+  
+    return <span className={className}>{status}</span>;
+  };
+  const columnDefs = useMemo(
+    () => [
+      {
+        headerName: "STATION",
+        field: "STATION",
+        minWidth: 100,
+        maxWidth: 100,
+        cellClass: "font-mono text-slate-300",
+      },
+      {
+        headerName: "USER ID",
+        field: "USER_ID",
+        minWidth: 100,
+        maxWidth: 100,
+        cellClass: "font-mono text-slate-300",
+      },
+      {
+        headerName: "USER NAME",
+        field: "USER_NAME",
+        minWidth: 170,
+        maxWidth: 180,
+        cellClass: "font-mono text-slate-300",
+      },
+      {
+        headerName: "STATUS",
+        field: "STATUS",
+        minWidth: 90,
+        maxWidth: 100,
+        cellRenderer: StatusRenderer,
+      },
+      {
+        headerName: "CALLS",
+        field: "CALLS",
+        minWidth: 90,
+        maxWidth: 90,
+        cellClass: "font-mono text-slate-300",
+      },
+      {
+        headerName: "CONNECTED",
+        field: "connected_calls",
+        minWidth: 120,
+        maxWidth: 120,
+        cellClass: "font-mono text-slate-300",
+      },
+      {
+        headerName: "PHONE",
+        field: "phone_number",
+        minWidth: 140,
+        maxWidth: 140,
+        cellClass: "font-mono text-slate-300",
+      },
+      {
+        headerName: "LOGIN DURATION",
+        field: "login_duration",
+        minWidth: 150,
+        maxWidth: 160,
+        cellClass: "font-mono text-slate-300",
+      },
+      {
+        headerName: "TALK TIME",
+        field: "TALK_TIME_HH_MM_SS",
+        minWidth: 120,
+        maxWidth: 160,
+        // flex: 1, // ✅ let this stretch
+        cellClass: "font-mono text-slate-300",
+      },
+    ],
+    []
+  );
+  const defaultColDef = useMemo(
+    () => ({
+      sortable: false,
+      filter: false,
+      resizable: false,
+      suppressMovable: true,
+    }),
+    []
+  );
+
+  const agTheme = useMemo(
+    () =>
+      themeQuartz.withParams({
+        backgroundColor: "transparent",
+        headerBackgroundColor: "rgba(2,6,23,0.5)",
+        headerTextColor: "#94a3b8",
+        foregroundColor: "#cbd5f5",
+        borderColor: "rgba(30,41,59,0.4)",
+        rowHoverColor: "rgba(30,41,59,0.4)",
+        oddRowBackgroundColor: "rgba(2,6,23,0.5)",
+        headerHeight: 36,
+        rowHeight: 34,
+        wrapperBorderRadius: 0,
+      }),
+    []
+  );
+
   return (
-    <div className="border border-slate-800 rounded-lg bg-slate-900/30 overflow-hidden">
-      <div className="flex justify-between items-center p-6 border-b border-slate-800">
+    <div className="p-2 h-full border border-border rounded-lg bg-card/60">
+      {/* Header */}
+      <div className="flex justify-between items-center m-2 lg:mb-4">
         <h3 className="text-xl leading-[1rem] font-semibold text-white flex items-center gap-2">
           <Users className="w-4 h-4 text-emerald-400" />
-          Agents on Calls
+          Agents Productivity
         </h3>
-        {/* <button className="text-slate-400 hover:text-white">
-          <MoreHorizontal className="w-4 h-4" />
-        </button> */}
       </div>
 
-      <div className="overflow-x-auto max-h-[300px] overflow-y-auto">
-        <table className="w-full text-sm ">
-          <thead className="bg-slate-950/50 border-b border-slate-800">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">agent id</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">agent name</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">campaign id</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">status</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">calls_handled</th>
-
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-800/50">
-            {data.map((row, idx) => (
-              <tr key={idx} className="hover:bg-slate-800/20">
-                <td className="px-4 py-3 text-sm text-slate-300 font-mono">{row.agent_id}</td>
-                <td className="px-4 py-3 text-sm text-slate-300">
-                  <div className="flex items-center gap-2">
-                    <div className="w-5 h-5 rounded-full bg-slate-700 flex items-center justify-center text-[10px] font-bold text-slate-300">
-                      {row.agent_name.charAt(0)}
-                    </div>
-                    {row.agent_name}
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-sm text-slate-300 font-mono">{row.campaign_id}</td>
-                <td className="px-4 py-3 text-sm">
-                  <span className={`px-2 py-1 rounded text-xs font-semibold ${row.status === 'READY' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-blue-500/20 text-blue-400'}`}>
-                    {row.status}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-sm text-slate-300 font-mono">{row.calls_handled}</td>
-               
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {/* Grid */}
+      <div className="lg:h-[90%] h-[320px] max-h-full border border-border rounded-sm shadow-[0_8px_30px_rgba(0,0,0,0.45)]">
+        <AgGridReact
+        // height="90%%"
+          rowData={rowData}
+          columnDefs={columnDefs}
+          defaultColDef={defaultColDef}
+          theme={agTheme}
+          suppressRowClickSelection
+          suppressCellFocus
+          domLayout="normal"
+        />
       </div>
     </div>
   );
