@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import React, { useMemo, useState } from "react"
 
 import { TrendingDown } from "lucide-react"
 import { useGetLeadfunnelQuery } from "../services/dashboardApi";
@@ -26,19 +26,17 @@ export function LeadFunnel() {
           skipPollingIfUnfocused: true,
         }
       );
-  const isInvalidRange = startDate.toISOString().split("T")[0] > endDate.toISOString().split("T")[0]
 
-  let data = LeadFunnelData?.data || {}
+  let data = LeadFunnelData?.data ?? {}
 
-    const {
-       dialed= 0,
-            Interested= 0,
-            connected= 0,
-            qualified= 0,
-            converted= 0,
-            existing_clients= 0,
-      
-      } = data || {};
+  const num = (v) => (Number.isFinite(+v) ? +v : 0)
+
+  const dialed = num(data.dialed)
+  const connected = num(data.connected)
+  const interested = num(data.Interested)
+  const converted = num(data.converted)
+
+
   // Calculate percentages and conversions
   const safePercent = (value, total, decimals = 1) =>
     total > 0 ? `${((value / total) * 100).toFixed(decimals)}%` : "0%";
@@ -46,7 +44,9 @@ export function LeadFunnel() {
   const safeDrop = (value, total, decimals = 1) =>
     total > 0 ? `${(100 - (value / total) * 100).toFixed(decimals)}%` : "0%";
   
-  const stages = [
+  const format = (v) => num(v).toLocaleString()
+  const stages = useMemo(
+    () =>[
     {
       label: "DIALED",
       subLabel: `${dialed}`,
@@ -67,12 +67,12 @@ export function LeadFunnel() {
       },
     {
       label: "INTERESTED",
-      subLabel: `${Interested}`,
-      value: Interested,
-      percentage: safePercent(Interested, dialed),
+      subLabel: `${interested}`,
+      value: interested,
+      percentage: safePercent(interested, dialed),
       metric: "INTERESTED",
       width: 58,
-      drop: safeDrop(Interested, dialed),
+      drop: safeDrop(interested, dialed),
     },
   
     
@@ -83,10 +83,10 @@ export function LeadFunnel() {
       label: "CONVERTED",
       subLabel: `${converted}`,
       value: converted,
-      percentage: safePercent(converted, Interested, 0),
+      percentage: safePercent(converted, interested, 0),
       metric: "CONVERTED",
       width: 48,
-      drop: safeDrop(converted, Interested, 0),
+      drop: safeDrop(converted, interested, 0),
     },
     // {
     //     label: "QUALIFIED",
@@ -97,7 +97,9 @@ export function LeadFunnel() {
     //     width: 50,
     //     drop: safeDrop(qualified, converted, 0),
     //   },
-  ];
+  ],
+  [dialed, connected, interested, converted]
+)
 
   return (
     <div className="p-2 border border-border rounded-lg bg-card/60">
@@ -143,7 +145,7 @@ export function LeadFunnel() {
 
       <div className="relative flex flex-col items-center gap-0 mt-4 px-4">
         {stages.map((stage, index) => (
-          <div key={index} className="relative w-full flex items-center justify-center mb-3">
+          <div key={stage.label} className="relative w-full flex items-center justify-center mb-3">
             {/* Left Label */}
             <div className="absolute left-0 top-1/2 -translate-y-1/2 text-left w-20">
               <div className="text-xs uppercase tracking-wider">{stage.label}</div>
@@ -166,16 +168,16 @@ export function LeadFunnel() {
 
               {/* Content */}
               <div className="relative z-10 flex flex-col items-center justify-center">
-                <div className="text-2xl font-bold text-white">{stage.value.toLocaleString()}</div>
+                <div className="text-2xl font-bold text-white">{format(stage.value)}</div>
                 <div className="text-xs text-cyan-400">
                   {stage.percentage} <span className="text-slate-500">{stage.metric}</span>
                 </div>
               </div>
 
               {/* Connector Dot */}
-              {index < stages.length - 1 && (
+              {/* {index < stages.length - 1 && (
                 <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 w-2 h-2 bg-cyan-500 rounded-full z-20" />
-              )}
+              )} */}
             </div>
 
             {/* Right Drop Percentage */}

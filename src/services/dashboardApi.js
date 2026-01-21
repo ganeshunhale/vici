@@ -1,13 +1,33 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import { showSessionPopup } from '../slices/sessionSlice.js';
 
-const API_BASE = 'http://192.168.15.61:8000';
+const baseQuery = fetchBaseQuery({
+  baseUrl: "http://192.168.15.61:8000",
+  prepareHeaders: (headers) => {
+    const token = localStorage.getItem("access_token");
 
+    if (token) {
+      headers.set("authorization", `Bearer ${token}`);
+    }
+
+    return headers;
+  },
+});
+
+// ✅ Interceptor
+const baseQueryWithSession = async (args, api, extraOptions) => {
+  const result = await baseQuery(args, api, extraOptions);
+
+  if (result?.error?.status === 401) {
+    api.dispatch(showSessionPopup());
+  }
+
+  return result;
+};
 export const dashboardApi = createApi({
   reducerPath: 'dashboardApi',
-  baseQuery: fetchBaseQuery({
-    baseUrl: API_BASE,
-  }),
-  tagTypes: ['Dashboard'],
+  baseQuery: baseQueryWithSession,
+  tagTypes: ['Dashboard',"Leads"],
   endpoints: (builder) => ({
 
   //   getOverview: builder.query({
@@ -21,7 +41,13 @@ export const dashboardApi = createApi({
   // },
       
   //   }),
-
+  login: builder.mutation({
+    query: (body) => ({
+      url: "/login",
+      method: "POST",
+      body,
+    }),
+  }),
     getTotalDialsToday: builder.query({
       query: () => '/totaldialstoday',
       providesTags: ['Dashboard'],
@@ -98,6 +124,51 @@ export const dashboardApi = createApi({
       }),
       providesTags: ["Dashboard"],
     }),
+    uploadExcelLeads: builder.mutation({
+      query: (formData) => ({
+        url: "/upload_excel_leads",
+        method: "POST",
+        body: formData,
+      }),
+      invalidatesTags: ["Leads"],
+    }),
+    
+    getLeads: builder.query({
+      query: (params={}) => ({
+        url: "/leads",
+        params: Object.keys(params).length ? params : undefined,
+      }),
+      providesTags: ["Leads"],
+    }),
+    callNumber: builder.mutation({
+      query: (phone) => ({
+        url: "/call",
+        method: "POST",
+        params: { phone },
+      }),
+    }),
+    callHangup: builder.mutation({
+      query: () => ({
+        url: "/hangup",
+        method: "POST",
+        
+      }),
+    }),
+    getLogData: builder.query({
+      query: (user) => ({
+        url: "/logdata",
+        method: "POST",
+        params: { user },
+      }),
+    }),
+    
+      submitStatus: builder.mutation({
+        query: (status) => ({
+          url: "/vicidial-agent",
+          method: "GET",
+          params: { status },
+        }),
+      }),
   }),
 });
 
@@ -105,6 +176,7 @@ export const {
   // useGetOverviewQuery,
   // useGetAgentsOnCallsQuery,
   // useGetAgentPerformanceQuery,
+  useLoginMutation,
   useGetCallStatusQuery,
   useGetAllDataQuery,
   useGetTotalDialsTodayQuery,
@@ -115,5 +187,12 @@ export const {
   useGetGraphDataQuery,
   useGetCompliancereviewQuery,
   useGetLeadfunnelQuery,
+  useUploadExcelLeadsMutation,
+  useGetLeadsQuery,
+  useCallNumberMutation,
+  useCallHangupMutation,
+  useGetLogDataQuery,
+  useSubmitStatusMutation,
+
 
 } = dashboardApi;

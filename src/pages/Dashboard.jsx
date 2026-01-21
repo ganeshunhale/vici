@@ -107,7 +107,7 @@ export default function Dashboard() {
 
         <CallStatusChart callStatus={callStatus} CallStatusLoading={CallStatusLoading}/>
 
-       {callStatus && !CallStatusLoading &&( <div className="mt-4 flex justify-between text-sm border-t border-slate-700 pt-2">
+       {callStatus && !CallStatusLoading &&( <div className="mt-4 flex justify-between text-sm border-t border-slate-700 p-2 pb-0">
           <span className="text-slate-300">Total Calls</span>
           <span className="font-mono text-white font-semibold">
             {callStatus.data[0].Totalcall || 0}
