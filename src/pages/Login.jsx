@@ -1,10 +1,15 @@
 import { useState } from "react";
 import { Loader2, Lock, User } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useLoginMutation } from "../services/dashboardApi";
+import { setUser } from "../slices/authSlice";
+import { useDispatch } from "react-redux";
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const dispatch = useDispatch();
+  const from = location.state?.from?.pathname;
   const [login, { isLoading }] = useLoginMutation();
 
   const [form, setForm] = useState({
@@ -34,8 +39,9 @@ export default function Login() {
         })
       );
       localStorage.setItem("user", JSON.stringify(res));
-
-      navigate("/");
+      dispatch(setUser(res));
+      const defaultPath = res.isAdmin ? "/" : "/call";
+      navigate(defaultPath, { replace: true });
     } catch (err) {
       setError(err?.data?.message || "Invalid credentials");
     }

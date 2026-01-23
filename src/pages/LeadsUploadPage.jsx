@@ -5,7 +5,7 @@ import {
   useUploadExcelLeadsMutation,
   useGetLeadsQuery,
   useGetLogDataQuery,
-  useCallNumberMutation,
+  useDialNextMutation,
   useCallHangupMutation,
 } from "../services/dashboardApi";
 import { AllCommunityModule, ModuleRegistry, themeQuartz } from "ag-grid-community";
@@ -48,7 +48,7 @@ export default function LeadsUploadPage() {
   const [activeNumber, setActiveNumber] = useState(null);
 const [polling, setPolling] = useState(false);
 const [showDispo, setShowDispo] = useState(false);
-const [callNumber] = useCallNumberMutation();
+const [dialNext] = useDialNextMutation();
 const [callHangup]= useCallHangupMutation()
 
 const user = JSON.parse(localStorage.getItem("user"))?.user;
@@ -136,7 +136,7 @@ const { data: logData } = useGetLogDataQuery(user, {
     }
   
     try {
-      const res = await callNumber(number).unwrap();
+      const res = await dialNext(number).unwrap();
   
       if (res?.vicidial_response?.toLowerCase().includes("error")) {
         // alert(res.vicidial_response);
@@ -150,7 +150,7 @@ const { data: logData } = useGetLogDataQuery(user, {
       console.error("Call failed:", err);
       error("Call failed");
     }
-  }, [activeNumber, callNumber, success, error])
+  }, [activeNumber, dialNext, success, error])
   useEffect(() => {
     if (!logData?.leads?.length) return;
   
@@ -224,16 +224,16 @@ const { data: logData } = useGetLogDataQuery(user, {
         valueFormatter: ({ value }) =>
           value ? new Date(value).toLocaleDateString() : "—",
       },
-      {
-        headerName: "CALL",
-        colId: "call",              // ✅ needed for refresh targeting
-        minWidth: 120,
-        maxWidth: 130,
-        pinned: "right",
-        lockPinned: true,
-        suppressMovable: true,
-        cellRenderer: CallCellRenderer,   // ✅ use component directly
-      },
+      // {
+      //   headerName: "CALL",
+      //   colId: "call",              // ✅ needed for refresh targeting
+      //   minWidth: 120,
+      //   maxWidth: 130,
+      //   pinned: "right",
+      //   lockPinned: true,
+      //   suppressMovable: true,
+      //   cellRenderer: CallCellRenderer,   // ✅ use component directly
+      // },
     ],
     []
   );
@@ -403,7 +403,7 @@ const { data: logData } = useGetLogDataQuery(user, {
         </div>
       </div>
       {showDispo && (
-  <CallDispositionPopup setShowDispo={setShowDispo} />
+  <CallDispositionPopup closeDispo={()=>setShowDispo(false)} />
 )}
     </div>
   );

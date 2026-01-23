@@ -27,42 +27,42 @@ const baseQueryWithSession = async (args, api, extraOptions) => {
 export const dashboardApi = createApi({
   reducerPath: 'dashboardApi',
   baseQuery: baseQueryWithSession,
-  tagTypes: ['Dashboard',"Leads"],
+  tagTypes: ['Dashboard', "Leads"],
   endpoints: (builder) => ({
 
-  //   getOverview: builder.query({
-  //     query: () => '/dashboard',
-  //     providesTags: ['Dashboard'],
-  //     pollingInterval: 60000,
-  // skipPollingIfUnfocused: true,
-  // keepUnusedDataFor: 60, 
-  // extraOptions: {
-  //   maxRetries: 3,
-  // },
-      
-  //   }),
-  login: builder.mutation({
-    query: (body) => ({
-      url: "/login",
-      method: "POST",
-      body,
+    //   getOverview: builder.query({
+    //     query: () => '/dashboard',
+    //     providesTags: ['Dashboard'],
+    //     pollingInterval: 60000,
+    // skipPollingIfUnfocused: true,
+    // keepUnusedDataFor: 60, 
+    // extraOptions: {
+    //   maxRetries: 3,
+    // },
+
+    //   }),
+    login: builder.mutation({
+      query: (body) => ({
+        url: "/login",
+        method: "POST",
+        body,
+      }),
     }),
-  }),
     getTotalDialsToday: builder.query({
       query: () => '/totaldialstoday',
       providesTags: ['Dashboard'],
-  keepUnusedDataFor: 60, 
-  extraOptions: {
-    maxRetries: 3,
-  },
-      
+      keepUnusedDataFor: 60,
+      extraOptions: {
+        maxRetries: 3,
+      },
+
     }),
 
     // getAgentsOnCalls: builder.query({
     //   query: () => '/getcallswaiting',
     //   providesTags: ['Dashboard'],
     //   pollingInterval: 60000,
-      
+
     //   transformResponse: (res) => res.data,
     // }),
 
@@ -84,19 +84,18 @@ export const dashboardApi = createApi({
     getCallStatus: builder.query({
       query: () => '/getcallbystatus',
       providesTags: ['Dashboard'],
-      
     }),
 
     getAllData: builder.query({
       query: () => '/get_all_data',
       providesTags: ['Dashboard'],
     }),
-    
+
     getAgentsProductivity: builder.query({
       query: () => '/agentsproductivity',
       providesTags: ['Dashboard'],
     }),
-    
+
     getCampaignPerformance: builder.query({
       query: () => '/campaignperformance',
       providesTags: ['Dashboard'],
@@ -118,7 +117,7 @@ export const dashboardApi = createApi({
       providesTags: ['Dashboard'],
     }),
     getLeadfunnel: builder.query({
-      query: (params={}) => ({
+      query: (params = {}) => ({
         url: "/leadfunnel",
         params: Object.keys(params).length ? params : undefined,
       }),
@@ -132,26 +131,27 @@ export const dashboardApi = createApi({
       }),
       invalidatesTags: ["Leads"],
     }),
-    
+
     getLeads: builder.query({
-      query: (params={}) => ({
+      query: (params = {}) => ({
         url: "/leads",
         params: Object.keys(params).length ? params : undefined,
       }),
       providesTags: ["Leads"],
     }),
-    callNumber: builder.mutation({
-      query: (phone) => ({
+    dialNext: builder.mutation({
+      query: () => ({
         url: "/call",
         method: "POST",
-        params: { phone },
+        // body: body ?? {}, 
+        // params: { phone },
       }),
     }),
     callHangup: builder.mutation({
       query: () => ({
         url: "/hangup",
         method: "POST",
-        
+
       }),
     }),
     getLogData: builder.query({
@@ -161,14 +161,25 @@ export const dashboardApi = createApi({
         params: { user },
       }),
     }),
-    
-      submitStatus: builder.mutation({
-        query: (status) => ({
-          url: "/vicidial-agent",
-          method: "GET",
-          params: { status },
-        }),
+
+    submitStatus: builder.mutation({
+      query: (params = {}) => ({
+        url: "/vicidial-agent",
+        method: "POST",
+        params: Object.keys(params).length ? params : undefined,
       }),
+    }),
+    getAgentWiseLead: builder.query({
+      query: (params={}) => ({
+        url: "/clients_for_agent",
+        method: "POST",
+        params: Object.keys(params).length ? params : undefined,
+      }),
+      providesTags: ["Leads"],
+    }),
+    ping: builder.query({
+      query: () => "/ping",
+    }),
   }),
 });
 
@@ -189,10 +200,10 @@ export const {
   useGetLeadfunnelQuery,
   useUploadExcelLeadsMutation,
   useGetLeadsQuery,
-  useCallNumberMutation,
+  useDialNextMutation,
   useCallHangupMutation,
   useGetLogDataQuery,
   useSubmitStatusMutation,
-
-
+  useGetAgentWiseLeadQuery,
+  usePingQuery
 } = dashboardApi;
