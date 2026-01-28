@@ -1,12 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { format } from "date-fns";
 import { BarChart, ChevronRight, Loader2, LogOut, Menu, User, X } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { clearUser, selectIsAdmin, selectRoleLabel, selectUser, selectUserName } from "../slices/authSlice";
-import { setCurrentLead } from "../slices/dialSlice";
+import { resetAutoDialTime, setCurrentLead } from "../slices/dialSlice";
 import { useDialNextMutation } from "../services/dashboardApi";
-import { CALL_STATE, selectIsCallBusy, setCallState } from "../slices/callSlice";
+import { CALL_STATE, selectCallState, selectIsCallBusy, setCallState } from "../slices/callSlice";
+import dayjs from "dayjs"
 
 const adminNavItems = [
   { name: "Dashboard", path: "/" },
@@ -69,6 +70,37 @@ export default function TopNav() {
       alert("Failed to dial next. Please try again.");
     }
   };
+
+  const { isPaused, autoDialTime } = useSelector((e) => e.dial);
+  const [nextDialIn, setNextDialIn] = useState(60);
+  
+  const dialLockRef = useRef(false);
+  
+  useEffect(() => {
+    if(isAdmin) return
+    dialLockRef.current = false; // reset lock whenever a new autodia ltime is set
+  
+    const timer = setInterval(() => {
+      if (isPaused || isCallBusy) return;
+  
+      const timeRemaining = dayjs(autoDialTime).diff(dayjs(), "seconds");
+      setNextDialIn(Math.max(0, timeRemaining));
+  
+      if (timeRemaining <= 0 && !dialLockRef.current) {
+        dialLockRef.current = true;   // ✅ prevents repeated calls
+        handleDialNext();             // fire once
+      }
+    }, 1000);
+  
+    return () => clearInterval(timer);
+  }, [autoDialTime, isPaused, isCallBusy, handleDialNext, isAdmin]);
+
+  useEffect(() => {
+    if(isAdmin) return
+    if (!isCallBusy && !isPaused) {
+      dispatch(resetAutoDialTime());
+    }
+  }, [isCallBusy, isPaused, dispatch, isAdmin]);
 
   return (
     <header className="sticky top-0 z-50 h-16 border-b border-border bg-gradient-to-b from-slate-900/80 to-slate-950/80 backdrop-blur-md">
@@ -141,8 +173,9 @@ export default function TopNav() {
 
         {!!user && !isAdmin && (
             <button
-              onClick={handleDialNext}
-              disabled={isDialing|| isCallBusy}
+              // onClick={handleDialNext}
+              // disabled={isDialing|| isCallBusy}
+              disabled={true}
               className="hidden md:flex items-center gap-3 px-5 py-2 rounded-xl border border-cyan-400/20
                          bg-gradient-to-r from-cyan-900/50 via-sky-900/40 to-indigo-900/40
                          hover:from-cyan-900/70 hover:via-sky-900/60 hover:to-indigo-900/60
@@ -156,7 +189,7 @@ export default function TopNav() {
                   <ChevronRight className="w-5 h-5 text-cyan-200" />
                 )}
                 <span className="tracking-widest text-xs font-semibold text-cyan-100">
-                  DIAL NEXT
+                  DIAL NEXT in {nextDialIn}
                 </span>
               </div>
 
@@ -200,7 +233,7 @@ export default function TopNav() {
             <button
               onClick={async () => {
                 setMobileOpen(false);
-                await handleDialNext();
+                // await handleDialNext();
               }}
               disabled={isDialing}
               className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-cyan-400/20

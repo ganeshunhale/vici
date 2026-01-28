@@ -141,24 +141,10 @@ export default function CallPage() {
    * We'll wait for uniqueid AFTER hangup OR during call.
    */
   useEffect(() => {
-    if (!logData?.leads?.length) return;
-
-    // If your API returns the latest log at index 0:
-    const lead = logData.leads[0];
-
-    // const logPhone = String(lead?.phone_number || "").trim();
-    // const actPhone = String(activeNumber || "").trim();
-
-    // // If phone is present, ensure we match to current call.
-    // const matchesActive = !actPhone || !logPhone ? true : logPhone === actPhone;
-
-    // if (!matchesActive) return;
-
-    // ✅ uniqueid received -> open dispo + stop polling
-    if (lead?.uniqueid) {
-      setCallState(CALL_STATE.DISPO); // pollingInterval becomes 0
-      setShowDispo(true);
-    }
+    console.log({inCallLeadsUploadPage: inCall})
+    if (logData?.inCall) return;
+    setCallState(CALL_STATE.DISPO); 
+    setShowDispo(true);
   }, [logData]);
 
   /**

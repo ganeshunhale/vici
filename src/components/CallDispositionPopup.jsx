@@ -6,7 +6,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 
 import { useSubmitStatusMutation, useDialNextMutation } from "../services/dashboardApi";
-import {  CALL_STATE, selectIsCallBusy, setCallState } from "../slices/callSlice";
+import {  CALL_STATE, selectIsCallBusy, setCallState ,selectIsCallbackDial} from "../slices/callSlice";
 import { clearCurrentLead, setCurrentLead } from "../slices/dialSlice";
 
 const DISPOSITIONS = [
@@ -39,7 +39,7 @@ export default function CallDispositionPopup({ closeDispo, leadName = "Customer"
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const isCallBusy = useSelector(selectIsCallBusy);
-
+const isCallbackDialed = useSelector(selectIsCallbackDial)
   const [submitStatus, { isLoading: submitting }] = useSubmitStatusMutation();
   const [dialNext, { isLoading: isDialing }] = useDialNextMutation();
 
@@ -101,7 +101,7 @@ export default function CallDispositionPopup({ closeDispo, leadName = "Customer"
     try {
       const ok = await submitOnly();
       if (!ok) return;
-      await sleep(2000);
+      await sleep(5000);
       dispatch(setCallState(CALL_STATE.DIALING));
       const res = await dialNext({}).unwrap();
 
@@ -154,7 +154,7 @@ console.log("details",res?.details )
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-md p-4">
       <div
-        className="w-full max-w-[860px] rounded-2xl border border-white/10 overflow-hidden
+        className="w-full max-w-[860px] max-h-[700px] rounded-2xl border border-white/10 overflow-y-scroll
                    bg-gradient-to-b from-slate-900/70 to-slate-950/80 shadow-[0_30px_120px_rgba(0,0,0,0.65)]"
       >
         {/* Header */}
@@ -344,7 +344,7 @@ console.log("details",res?.details )
               {submitting ? "Saving..." : "Submit & Close"}
             </button>
 
-            <button
+            {!isCallbackDialed && <button
               onClick={handleWrapAndNext}
               disabled={!canSubmit || submitting }
               className="w-full md:w-1/2 rounded-xl border border-rose-300/15 px-4 py-3 font-semibold
@@ -353,7 +353,7 @@ console.log("details",res?.details )
                          transition disabled:opacity-50"
             >
               {isDialing ? "Dialing..." : "Wrap & Go To Next Call →"}
-            </button>
+            </button>}
           </div>
 
           {/* tiny hint like your app */}

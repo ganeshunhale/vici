@@ -32,6 +32,7 @@ export function useToast() {
 
   const info = (message) => {
     toast(message, {
+      duration: 8000,
       icon: <Info className="w-5 h-5 text-sky-400" />,
       style: {
         background: "rgba(15,23,42,0.95)",

@@ -140,11 +140,12 @@ export const dashboardApi = createApi({
       providesTags: ["Leads"],
     }),
     dialNext: builder.mutation({
-      query: () => ({
+      query: (params={}) => ({
         url: "/call",
         method: "POST",
         // body: body ?? {}, 
         // params: { phone },
+        params: Object.keys(params).length ? params : undefined,
       }),
     }),
     callHangup: builder.mutation({
@@ -180,6 +181,12 @@ export const dashboardApi = createApi({
     ping: builder.query({
       query: () => "/ping",
     }),
+    userTimeline: builder.query({
+      query: () => "/usertimeline",
+    }),
+    getCampaigns: builder.query({
+      query: () => "/campaigns",
+    }),
   }),
 });
 
@@ -205,5 +212,7 @@ export const {
   useGetLogDataQuery,
   useSubmitStatusMutation,
   useGetAgentWiseLeadQuery,
-  usePingQuery
+  usePingQuery,
+  useUserTimelineQuery,
+  useGetCampaignsQuery,
 } = dashboardApi;

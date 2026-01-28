@@ -13,6 +13,7 @@ const callSlice = createSlice({
   initialState: {
     state: CALL_STATE.IDLE,
     showDispo: false,
+    isCallbackDial : false
   },
   reducers: {
     setCallState(state, action) {
@@ -30,16 +31,21 @@ const callSlice = createSlice({
       state.state = CALL_STATE.IDLE;
       state.showDispo = false;
     },
+    setIsCallbackDial(state,action){
+      state.isCallbackDial = action.payload
+    }
   },
 });
 
-export const { setCallState, openDispo, closeDispo, resetCall } =
+export const { setCallState, openDispo, closeDispo, resetCall ,setIsCallbackDial} =
   callSlice.actions;
 
 export default callSlice.reducer;
 
 export const selectCallState = (s) => s.call.state;
 export const selectShowDispo = (s) => s.call.showDispo;
+export const selectIsCallbackDial = (s) => s.call.isCallbackDial;
 
 export const selectIsCallBusy = (s) =>
   s.call.state !== CALL_STATE.IDLE; // disable DIAL NEXT when true
+

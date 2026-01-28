@@ -7,6 +7,7 @@ import {
   useGetLogDataQuery,
   useDialNextMutation,
   useCallHangupMutation,
+  useGetCampaignsQuery,
 } from "../services/dashboardApi";
 import { AllCommunityModule, ModuleRegistry, themeQuartz } from "ag-grid-community";
 import { useToast } from "../customHooks/useToast";
@@ -50,6 +51,7 @@ const [polling, setPolling] = useState(false);
 const [showDispo, setShowDispo] = useState(false);
 const [dialNext] = useDialNextMutation();
 const [callHangup]= useCallHangupMutation()
+const [selectedCampaign, setSelectedCampaign] = useState(null); 
 
 const user = JSON.parse(localStorage.getItem("user"))?.user;
 
@@ -57,7 +59,8 @@ const { data: logData } = useGetLogDataQuery(user, {
   skip: !polling,
   pollingInterval: 5000,
 });
-  const { success, error } = useToast();
+const {data:campaingList,isLoading:campaingListLoading}= useGetCampaignsQuery();
+  const { success, error ,info} = useToast();
    const today = new Date()
   
       const [startDate, setStartDate] = useState(new Date());
@@ -87,12 +90,21 @@ const { data: logData } = useGetLogDataQuery(user, {
 
     const formData = new FormData();
     formData.append("file", file);
-
+    formData.append("campaign_id", String(selectedCampaign.id));
+    formData.append("campaign_name", selectedCampaign.name);
     try {
-      await uploadExcel(formData).unwrap();
+      const res = await uploadExcel(formData).unwrap();
+
+      if (Array.isArray(res?.skipped_details) && res.skipped_details.length > 0) {
+        res.skipped_details.forEach(({ phone, reason }) => {
+          info(`${phone} - ${reason}`);
+        });
+      } else {
+        success("Leads uploaded successfully!");
+      }
       setFile(null);
+      setSelectedCampaign(null);
       fileInputRef.current.value = null;
-      success("Leads uploaded successfully!");
       // gridRef.current?.api.refreshServerSide();
     } catch (err) {
       error("Upload failed, please try again.");
@@ -151,17 +163,15 @@ const { data: logData } = useGetLogDataQuery(user, {
       error("Call failed");
     }
   }, [activeNumber, dialNext, success, error])
+
   useEffect(() => {
-    if (!logData?.leads?.length) return;
-  
-    const lead = logData.leads[0];
-  
-    if (lead.uniqueid) {
-      setPolling(false);
-      setShowDispo(true);
-      setActiveNumber(null);
-    }
+    // console.log({inCallLeadsUploadPage})
+    if (logData?.inCall) return;
+    setPolling(false);
+    setShowDispo(true);
+    setActiveNumber(null);
   }, [logData]);
+  
 
   
   const columnDefs = useMemo(
@@ -331,9 +341,32 @@ const { data: logData } = useGetLogDataQuery(user, {
             {file ? file.name : "No file selected"}
           </span>
           </div>
+
+          <select
+            disabled={campaingListLoading || campaingList.data.length === 0}
+            value={selectedCampaign?.id ?? ""}
+            onChange={(e) => {
+              const id = e.target.value;
+              const c = campaingList?.data?.find((x) => x.campaign_id === id);
+              setSelectedCampaign(c ? { id: c.campaign_id, name: c.campaign_name } : null);
+            }}
+            className="px-3 py-2 rounded-md bg-slate-800 border border-slate-700 text-slate-200 text-sm disabled:opacity-50"
+          >
+            <option value="" disabled>
+              {campaingListLoading ? "Loading campaigns..." : "Select Campaign"}
+            </option>
+
+            {campaingList?.data?.map((c) => (
+              <option key={c.campaign_id} value={c.campaign_id}>
+                {c.campaign_name}
+              </option>
+            ))}
+          </select>
+        {/* </div> */}
+
           <button
             onClick={onUpload}
-            disabled={!file || uploading}
+            disabled={!file || !selectedCampaign || uploading}
             className=" px-5 py-2 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-sm flex items-center gap-2 disabled:opacity-50"
           >
             <Upload className="w-4 h-4" />
@@ -402,9 +435,9 @@ const { data: logData } = useGetLogDataQuery(user, {
           />
         </div>
       </div>
-      {showDispo && (
+      {/* {showDispo && (
   <CallDispositionPopup closeDispo={()=>setShowDispo(false)} />
-)}
+)} */}
     </div>
   );
 }

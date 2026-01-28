@@ -1,8 +1,10 @@
 import { createSlice } from "@reduxjs/toolkit";
+import dayjs from "dayjs"
 
 const initialState = {
   currentLead: null, // <-- will store response.details
-  isPaused: false
+  isPaused: false,
+  autoDialTime: dayjs().add(60, "seconds").valueOf()
 };
 
 const dialSlice = createSlice({
@@ -17,11 +19,14 @@ const dialSlice = createSlice({
     },
     togglePause(state){
       state.isPaused = !state.isPaused
+    },
+    resetAutoDialTime(state){
+      state.autoDialTime = dayjs().add(60, "seconds").valueOf()
     }
   },
 });
 
-export const { setCurrentLead, clearCurrentLead, togglePause } = dialSlice.actions;
+export const { setCurrentLead, clearCurrentLead, togglePause, resetAutoDialTime } = dialSlice.actions;
 export default dialSlice.reducer;
 
 export const selectCurrentLead = (state) => state.dial.currentLead;
