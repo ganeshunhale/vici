@@ -86,30 +86,74 @@ const {data:campaingList,isLoading:campaingListLoading}= useGetCampaignsQuery();
   const totalRows = data?.count || 0;
 
   const onUpload = async () => {
-    if (!file) return;
+  if (!file || !selectedCampaign) return;
 
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("campaign_id", String(selectedCampaign.id));
-    formData.append("campaign_name", selectedCampaign.name);
-    try {
-      const res = await uploadExcel(formData).unwrap();
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("campaign_id", String(selectedCampaign.id));
+  formData.append("campaign_name", selectedCampaign.name);
 
-      if (Array.isArray(res?.skipped_details) && res.skipped_details.length > 0) {
-        res.skipped_details.forEach(({ phone, reason }) => {
-          info(`${phone} - ${reason}`);
-        });
-      } else {
-        success("Leads uploaded successfully!");
-      }
-      setFile(null);
-      setSelectedCampaign(null);
-      fileInputRef.current.value = null;
-      // gridRef.current?.api.refreshServerSide();
-    } catch (err) {
-      error("Upload failed, please try again.");
+  try {
+    const res = await uploadExcel(formData).unwrap();
+
+    const skipped = Array.isArray(res?.skipped_details) ? res.skipped_details : [];
+    const listCampaignIssues = Array.isArray(res?.list_and_campaign) ? res.list_and_campaign : [];
+
+    // 1) Nice summary toast
+    const summary = `Total: ${res?.total_rows ?? "—"} | Success: ${res?.success ?? 0} | Failed: ${res?.failed ?? 0} | Skipped: ${res?.skipped ?? 0}`;
+    success(`Upload completed. ${summary}`);
+
+    // 2) Skipped details (as you already do, but capped)
+    const MAX_TOASTS = 8;
+    skipped.slice(0, MAX_TOASTS).forEach(({ phone, reason }) => {
+      info(`Skipped: ${phone} — ${reason}`);
+    });
+    if (skipped.length > MAX_TOASTS) {
+      info(`+${skipped.length - MAX_TOASTS} more skipped rows...`);
     }
-  };
+
+    // 3) list_and_campaign (group by reason -> list_ids + row range)
+    if (listCampaignIssues.length) {
+      const grouped = listCampaignIssues.reduce((acc, item) => {
+        const reason = item?.reason ?? "Unknown reason";
+        if (!acc[reason]) acc[reason] = [];
+        acc[reason].push(item);
+        return acc;
+      }, {});
+
+      Object.entries(grouped).forEach(([reason, items]) => {
+        const rows = items
+          .map((x) => Number(x.row))
+          .filter((n) => Number.isFinite(n))
+          .sort((a, b) => a - b);
+
+        const lists = [...new Set(items.map((x) => String(x.list_id)).filter(Boolean))];
+
+        const rowText =
+          rows.length
+            ? rows.length === 1
+              ? `Row ${rows[0]}`
+              : `Rows ${rows[0]}–${rows[rows.length - 1]} (${rows.length})`
+            : `${items.length} rows`;
+
+        const listText = lists.length ? `List: ${lists.join(", ")}` : "";
+
+        error(`⚠️ ${reason} • ${rowText}${listText ? ` • ${listText}` : ""}`);
+      });
+    }
+
+    // 4) If NOTHING noteworthy, show a clean success message
+    if (!skipped.length && !listCampaignIssues.length) {
+      success("Leads uploaded successfully!");
+    }
+
+    setFile(null);
+    setSelectedCampaign(null);
+    if (fileInputRef.current) fileInputRef.current.value = null;
+  } catch (err) {
+    error("Upload failed, please try again.");
+  }
+};
   const StatusRenderer = (params) => {
     const status = params.value;
   

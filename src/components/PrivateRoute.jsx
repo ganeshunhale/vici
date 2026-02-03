@@ -1,7 +1,7 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { selectIsAdmin, selectUser } from "../slices/authSlice";
-import { usePingQuery } from "../services/dashboardApi";
+
 
 export default function PrivateRoute({ allowedAdmin }) {
   const location = useLocation();

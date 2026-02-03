@@ -4,7 +4,7 @@ import dayjs from "dayjs"
 const initialState = {
   currentLead: null, // <-- will store response.details
   isPaused: false,
-  autoDialTime: dayjs().add(60, "seconds").valueOf()
+  autoDialTime: dayjs().add(30, "seconds").valueOf()
 };
 
 const dialSlice = createSlice({
@@ -21,7 +21,7 @@ const dialSlice = createSlice({
       state.isPaused = !state.isPaused
     },
     resetAutoDialTime(state){
-      state.autoDialTime = dayjs().add(60, "seconds").valueOf()
+      state.autoDialTime = dayjs().add(30, "seconds").valueOf()
     }
   },
 });

@@ -4,10 +4,12 @@ import { showSessionPopup } from '../slices/sessionSlice.js';
 const baseQuery = fetchBaseQuery({
   baseUrl: "http://192.168.15.61:8000",
   prepareHeaders: (headers) => {
-    const token = localStorage.getItem("access_token");
-
-    if (token) {
-      headers.set("authorization", `Bearer ${token}`);
+    const userStr = localStorage.getItem("user");
+    const user = userStr ? JSON.parse(userStr) : null;
+  
+    const accessToken = user?.access_token;
+    if (accessToken) {
+      headers.set("authorization", `Bearer ${accessToken}`);
     }
 
     return headers;
@@ -187,6 +189,16 @@ export const dashboardApi = createApi({
     getCampaigns: builder.query({
       query: () => "/campaigns",
     }),
+    deleteLead: builder.mutation({
+      // adjust this URL to match your backend
+      // option A: delete by lead_id
+      query: (phone_number) => ({
+        url: "/delete_lead",
+        method: "DELETE",
+        params: { phone_number },
+      }),
+      invalidatesTags: ["Leads"],
+    }),
   }),
 });
 
@@ -215,4 +227,5 @@ export const {
   usePingQuery,
   useUserTimelineQuery,
   useGetCampaignsQuery,
+  useDeleteLeadMutation,
 } = dashboardApi;

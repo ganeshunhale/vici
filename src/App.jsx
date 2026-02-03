@@ -12,6 +12,7 @@ import PrivateRoute from "./components/PrivateRoute";
 import CallPage from "./pages/CallPage";
 import SessionPopup from "./components/SessionPopup";
 import Unauthorized from "./pages/Unauthorized";
+import PublicRoute from "./components/PublicRoute";
 function NotFound() {
   return (
     <div className="text-center py-20">
@@ -27,8 +28,10 @@ function App() {
         <Layout>
         <SessionPopup />
           <Routes>
+          <Route element={<PublicRoute />}>
           <Route path="/login" element={<Login />} />
-          <Route path="/unauthorized" element={<Unauthorized />} />
+          </Route>
+          
           <Route element={<PrivateRoute allowedAdmin={true} />}>
               <Route path="/" element={<Dashboard />} />
               <Route path="/selective" element={<Selective />} />
@@ -39,6 +42,7 @@ function App() {
             <Route element={<PrivateRoute allowedAdmin={false} />}>
               <Route path="/call" element={<CallPage />} />
             </Route>
+            <Route path="/unauthorized" element={<Unauthorized />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Layout>

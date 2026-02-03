@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { format } from "date-fns";
 import { BarChart, ChevronRight, Loader2, LogOut, Menu, User, X } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
@@ -48,7 +48,10 @@ export default function TopNav() {
     dispatch(clearUser());
     navigate("/login", { replace: true });
   };
-  const handleDialNext = async () => {
+  const handleDialNextCb = useCallback(async () => {
+    if (isCallBusy || isDialing) return;
+    dialLockRef.current = true;
+    setNextDialIn(0);
     try {
       // if your API needs agent/user info, pass it here:
       // await dialNext({ userId: user.id }).unwrap();
@@ -65,39 +68,70 @@ export default function TopNav() {
       dispatch(setCallState(CALL_STATE.INCALL));
       // ✅ go to /call page so agent sees Contact Details & Leads
       navigate("/call");
+      dispatch(resetAutoDialTime());
+
     } catch (e) {
       dispatch(setCallState(CALL_STATE.IDLE));
       alert("Failed to dial next. Please try again.");
+      dispatch(resetAutoDialTime());
     }
-  };
+  },[
+    isCallBusy,
+    isDialing,
+    dispatch,
+    navigate,
+    
+  ]);
+  
 
   const { isPaused, autoDialTime } = useSelector((e) => e.dial);
-  const [nextDialIn, setNextDialIn] = useState(60);
+  const [nextDialIn, setNextDialIn] = useState(30);
   
   const dialLockRef = useRef(false);
   
   useEffect(() => {
-    if(isAdmin) return
-    dialLockRef.current = false; // reset lock whenever a new autodia ltime is set
+    if (isAdmin || !user) return;
+    if (isPaused || isCallBusy || isDialing) return;
+  
+    const target = dayjs(autoDialTime);
+    if (!target.isValid()) return;
+  
+    const initial = target.diff(dayjs(), "seconds");
+  
+    // ✅ if already expired, just reset countdown (don’t dial)
+    if (initial <= 0) {
+      dispatch(resetAutoDialTime());
+      return;
+    }
+  
+    dialLockRef.current = false;
+    setNextDialIn(initial);
   
     const timer = setInterval(() => {
-      if (isPaused || isCallBusy) return;
+      const remaining = target.diff(dayjs(), "seconds");
+      setNextDialIn(Math.max(0, remaining));
   
-      const timeRemaining = dayjs(autoDialTime).diff(dayjs(), "seconds");
-      setNextDialIn(Math.max(0, timeRemaining));
-  
-      if (timeRemaining <= 0 && !dialLockRef.current) {
-        dialLockRef.current = true;   // ✅ prevents repeated calls
-        handleDialNext();             // fire once
+      if (remaining <= 0 && !dialLockRef.current) {
+        dialLockRef.current = true;
+        handleDialNextCb();
       }
     }, 1000);
   
     return () => clearInterval(timer);
-  }, [autoDialTime, isPaused, isCallBusy, handleDialNext, isAdmin]);
+  }, [
+    autoDialTime,
+    isPaused,
+    isCallBusy,
+    isDialing,
+    isAdmin,
+    user,
+    handleDialNextCb,
+    dispatch,
+  ]);
 
   useEffect(() => {
     if(isAdmin) return
-    if (!isCallBusy && !isPaused) {
+    if (!isCallBusy && !isPaused && !isDialing) {
       dispatch(resetAutoDialTime());
     }
   }, [isCallBusy, isPaused, dispatch, isAdmin]);
@@ -173,9 +207,12 @@ export default function TopNav() {
 
         {!!user && !isAdmin && (
             <button
-              // onClick={handleDialNext}
-              // disabled={isDialing|| isCallBusy}
-              disabled={true}
+              onClick={() => {
+                dispatch(resetAutoDialTime()); // ✅ reset countdown target immediately
+                handleDialNextCb();
+              }}
+              disabled={isDialing || isCallBusy || isPaused}
+              // disabled={true}
               className="hidden md:flex items-center gap-3 px-5 py-2 rounded-xl border border-cyan-400/20
                          bg-gradient-to-r from-cyan-900/50 via-sky-900/40 to-indigo-900/40
                          hover:from-cyan-900/70 hover:via-sky-900/60 hover:to-indigo-900/60
@@ -233,7 +270,7 @@ export default function TopNav() {
             <button
               onClick={async () => {
                 setMobileOpen(false);
-                // await handleDialNext();
+                await handleDialNextCb();
               }}
               disabled={isDialing}
               className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-cyan-400/20

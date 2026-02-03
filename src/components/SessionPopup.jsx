@@ -2,12 +2,14 @@ import { useDispatch, useSelector } from "react-redux";
 import { Loader2, LogOut, RefreshCw } from "lucide-react";
 import { hideSessionPopup, setLoading } from "../slices/sessionSlice";
 import { useLoginMutation } from "../services/dashboardApi";
+import { useNavigate } from "react-router-dom";
+import { clearUser } from "../slices/authSlice";
 
 export default function SessionPopup() {
   const dispatch = useDispatch();
   const { expired, loading } = useSelector((s) => s.session);
   const [login] = useLoginMutation();
-
+  const navigate = useNavigate();
   if (!expired) return null;
 
   const handleContinue = async () => {
@@ -17,7 +19,7 @@ export default function SessionPopup() {
     try {
       dispatch(setLoading(true));
       const res = await login(creds).unwrap();
-      localStorage.setItem("access_token", res.access_token);
+      localStorage.setItem("user", JSON.stringify(res));
       dispatch(hideSessionPopup());
     } catch (err) {
       handleLogout();
@@ -27,9 +29,9 @@ export default function SessionPopup() {
   };
 
   const handleLogout = () => {
-    localStorage.clear();
-    sessionStorage.clear();
-    window.location.href = "/login";
+    dispatch(clearUser())
+    dispatch(hideSessionPopup());
+    navigate("/login", { replace: true });
   };
 
   return (

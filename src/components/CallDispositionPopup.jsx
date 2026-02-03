@@ -170,14 +170,14 @@ console.log("details",res?.details )
               </p>
             </div>
 
-            <button
+            {/* <button
               onClick={handleCloseDispo}
               className="h-9 w-9 rounded-lg border border-white/10 bg-slate-950/20 text-slate-300
                          hover:bg-slate-950/40 hover:text-slate-100 transition grid place-items-center"
               aria-label="Close"
             >
               ✕
-            </button>
+            </button> */}
           </div>
         </div>
 
