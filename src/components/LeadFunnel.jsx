@@ -7,20 +7,20 @@ import "react-datepicker/dist/react-datepicker.css";
 
 
 export function LeadFunnel() {
-    const today = new Date()
+    // const today = new Date()
 
-    const [startDate, setStartDate] = useState(new Date());
-    const [endDate, setEndDate] = useState(new Date());
-    const shouldSendParams =
-    startDate.toDateString() !== today.toDateString() ||
-    endDate.toDateString() !== today.toDateString();
-    const { data: LeadFunnelData } = useGetLeadfunnelQuery(
-        shouldSendParams
-          ? {
-              sd: startDate.toISOString().split("T")[0],
-              ed: endDate.toISOString().split("T")[0],
-            }
-          : undefined, // no params if both are today
+    // const [startDate, setStartDate] = useState(new Date());
+    // const [endDate, setEndDate] = useState(new Date());
+    // const shouldSendParams =
+    // startDate.toDateString() !== today.toDateString() ||
+    // endDate.toDateString() !== today.toDateString();
+    const { data: LeadFunnelData } = useGetLeadfunnelQuery(undefined,
+        // shouldSendParams
+        //   ? {
+        //       sd: startDate.toISOString().split("T")[0],
+        //       ed: endDate.toISOString().split("T")[0],
+        //     }
+        //   : undefined,
         {
           pollingInterval: 30000,
           skipPollingIfUnfocused: true,
@@ -106,7 +106,7 @@ export function LeadFunnel() {
       <div className="flex flex-col  justify-between m-2 lg:mb-2">
   <div className="flex justify-between">
     <h3 className="text-xl font-semibold text-white">Lead Funnel</h3>
-    <div className="flex items-center gap-2 mb-2">
+    {/* <div className="flex items-center gap-2 mb-2">
         <span className="text-sm text-slate-400">From:</span>
         <DatePicker
           selected={startDate}
@@ -133,7 +133,7 @@ export function LeadFunnel() {
           popperClassName="z-50 dark-datepicker"
           className="bg-input border border-border text-foreground text-sm rounded px-2 py-1 w-24"
         />
-      </div>
+      </div> */}
   </div>
 
   {/* Date Filters */}

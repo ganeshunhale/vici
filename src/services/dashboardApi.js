@@ -15,11 +15,36 @@ const baseQuery = fetchBaseQuery({
     return headers;
   },
 });
+const addParamsToUrl = (url, paramsObj) => {
+  const qs = new URLSearchParams(paramsObj).toString();
+  console.log('Constructed query string:', qs);
+  if (!qs) return url;
+  return url.includes("?") ? `${url}&${qs}` : `${url}?${qs}`;
+};
 
 // ✅ Interceptor
 const baseQueryWithSession = async (args, api, extraOptions) => {
-  const result = await baseQuery(args, api, extraOptions);
 
+  const withDate = extraOptions?.withDate === true;
+  const req = typeof args === "string" ? { url: args } : { ...args };
+  if (withDate) {
+    // read date range from redux
+    const { from, to } = api.getState().dateFilter || {}; // <-- your slice name
+    // if you store as startDate/endDate, rename accordingly
+
+    const params = {};
+    if (from) params.sd = from; // "YYYY-MM-DD"
+    if (to) params.ed = to;
+console.log('Adding date params to request:', params);
+    // attach to URL as query params
+    if (Object.keys(params).length) {
+      req.url = addParamsToUrl(req.url, params);
+      console.log('Modified request URL with date params:', req.url);
+    }
+  }
+  const result = await baseQuery(req, api, extraOptions);
+
+  
   if (result?.error?.status === 401) {
     api.dispatch(showSessionPopup());
   }
@@ -29,7 +54,7 @@ const baseQueryWithSession = async (args, api, extraOptions) => {
 export const dashboardApi = createApi({
   reducerPath: 'dashboardApi',
   baseQuery: baseQueryWithSession,
-  tagTypes: ['Dashboard', "Leads"],
+  tagTypes: ['Dashboard', "Leads","DATE_FILTERED"],
   endpoints: (builder) => ({
 
     //   getOverview: builder.query({
@@ -52,10 +77,11 @@ export const dashboardApi = createApi({
     }),
     getTotalDialsToday: builder.query({
       query: () => '/totaldialstoday',
-      providesTags: ['Dashboard'],
+      providesTags: ['Dashboard',"DATE_FILTERED"],
       keepUnusedDataFor: 60,
       extraOptions: {
         maxRetries: 3,
+        withDate: true
       },
 
     }),
@@ -95,12 +121,20 @@ export const dashboardApi = createApi({
 
     getAgentsProductivity: builder.query({
       query: () => '/agentsproductivity',
-      providesTags: ['Dashboard'],
+      providesTags: ['Dashboard',"DATE_FILTERED"],
+      extraOptions: {
+        maxRetries: 3,
+        withDate: true
+      },
     }),
 
     getCampaignPerformance: builder.query({
       query: () => '/campaignperformance',
-      providesTags: ['Dashboard'],
+      providesTags: ['Dashboard',"DATE_FILTERED"],
+      extraOptions: {
+        maxRetries: 3,
+        withDate: true
+      },
     }),
     getDialerPerformance: builder.query({
       query: () => '/dialerperformance',
@@ -119,11 +153,13 @@ export const dashboardApi = createApi({
       providesTags: ['Dashboard'],
     }),
     getLeadfunnel: builder.query({
-      query: (params = {}) => ({
-        url: "/leadfunnel",
-        params: Object.keys(params).length ? params : undefined,
-      }),
-      providesTags: ["Dashboard"],
+      query: () => "/leadfunnel",
+      providesTags: ['Dashboard',"DATE_FILTERED"],
+      extraOptions: {
+        maxRetries: 3,
+        withDate: true
+      },
+      
     }),
     uploadExcelLeads: builder.mutation({
       query: (formData) => ({
@@ -194,7 +230,7 @@ export const dashboardApi = createApi({
       // option A: delete by lead_id
       query: (phone_number) => ({
         url: "/delete_lead",
-        method: "DELETE",
+        
         params: { phone_number },
       }),
       invalidatesTags: ["Leads"],

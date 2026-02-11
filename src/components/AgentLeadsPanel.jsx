@@ -1,5 +1,7 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useGetAgentWiseLeadQuery } from "../services/dashboardApi";
+import { useDispatch } from "react-redux";
+import { setIsAvailableLeads } from "../slices/dialSlice";
 
 function safeText(v) {
   if (v === null || v === undefined) return "—";
@@ -34,9 +36,12 @@ export default function AgentLeadsPanel() {
     pollingInterval: 5000,
     skipPollingIfUnfocused: true,
   });
+  const dispatch = useDispatch();
 
   const leads = data?.data ?? [];
-
+  useEffect(() => {
+    dispatch(setIsAvailableLeads(leads.length > 0));
+  }, [leads.length, dispatch]);
   if (isLoading) {
     return (
       <div className="space-y-2 p-3">
@@ -67,8 +72,17 @@ export default function AgentLeadsPanel() {
   >
     {/* soft glow like ContactDetails */}
     <div className="pointer-events-none absolute inset-0 opacity-70 bg-[radial-gradient(700px_circle_at_15%_0%,rgba(56,189,248,0.16),transparent_55%),radial-gradient(700px_circle_at_90%_10%,rgba(168,85,247,0.14),transparent_55%)]" />
-
-      {leads.map((lead) => {
+    <div className="sticky top-0 z-10 border-b border-white/10 bg-slate-950/40 backdrop-blur px-3 py-2">
+        <div className="flex items-center justify-between">
+          <div className="text-sm font-semibold text-white">Leads</div>
+          <div className="text-xs text-slate-400">{safeText(data?.total_records)} total</div>
+        </div>
+      </div>
+      <div className="relative">
+        {leads.length === 0 ? (
+          <div className="p-4 text-sm text-slate-400">No Leads right now.</div>
+        ) : (
+          leads.map((lead) => {
         const fullName = [
           safeText(lead?.title) !== "—" ? safeText(lead?.title) : null,
           safeText(lead?.first_name) !== "—"
@@ -114,7 +128,9 @@ export default function AgentLeadsPanel() {
             </div>
           </div>
         );
-      })}
+      })
+        )}
+      </div>
     </div>
   );
 }

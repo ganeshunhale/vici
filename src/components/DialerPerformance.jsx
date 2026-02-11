@@ -21,7 +21,7 @@ const sparkData = [
 ]
 const toSparkData = (arr) => arr?.map(v => ({ v })) || sparkData
 /* ------------------ MAIN COMPONENT ------------------ */
-
+const num = (v) => Number(v ?? 0);
 export default function DialerPerformance({ data, isLoading ,graphData,isGraphDataLoading}) {
   /* ------------------ STATES ------------------ */
 
@@ -56,7 +56,7 @@ export default function DialerPerformance({ data, isLoading ,graphData,isGraphDa
   )
 
   /* ------------------ RENDER ------------------ */
-
+ 
   return (
     <div className="p-2 h-full border border-border rounded-lg bg-card/60">
       {/* HEADER */}
@@ -68,7 +68,7 @@ export default function DialerPerformance({ data, isLoading ,graphData,isGraphDa
           {/* LEFT */}
           <div>
           <div className="p-2 ">
-            <LabelValue label="Dial Level" value={s?.dial_level?.toFixed(1)|| null} />
+            <LabelValue label="Dial Level" value={num(s?.dial_level)?.toFixed(1)|| null} />
 </div>
             <div className="p-2 pb-0 border-t border-white/10">
               <LabelValue
@@ -96,7 +96,7 @@ export default function DialerPerformance({ data, isLoading ,graphData,isGraphDa
           />
           <MetricSpark
             label="Answer Speed"
-            value={`${s?.avg_answer_speed_sec?.toFixed(2)|| null}s`}
+            value={`${num(s?.avg_answer_speed_sec)?.toFixed(2)|| null}s`}
             color="#22c55e"
             data={toSparkData(graphData.connection_rate_percentage)}
           />
@@ -165,7 +165,7 @@ function Gauge({ value, rawValue, gaugeData }) {
       </ResponsiveContainer>
 
       <div className="absolute inset-x-0 bottom-12 text-center text-2xl font-semibold">
-        {rawValue?.toFixed(1)}
+        {num(rawValue)?.toFixed(1)}
       </div>
 
       <div className="absolute bottom-7 left-3 text-xs text-gray-400">0</div>

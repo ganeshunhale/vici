@@ -4,6 +4,7 @@ import dayjs from "dayjs"
 const initialState = {
   currentLead: null, // <-- will store response.details
   isPaused: false,
+  isAvailableLeads:false,
   autoDialTime: dayjs().add(30, "seconds").valueOf()
 };
 
@@ -22,11 +23,14 @@ const dialSlice = createSlice({
     },
     resetAutoDialTime(state){
       state.autoDialTime = dayjs().add(30, "seconds").valueOf()
+    },
+    setIsAvailableLeads(state, action){
+      state.isAvailableLeads = action.payload
     }
   },
 });
 
-export const { setCurrentLead, clearCurrentLead, togglePause, resetAutoDialTime } = dialSlice.actions;
+export const { setCurrentLead, clearCurrentLead, togglePause, resetAutoDialTime,setIsAvailableLeads } = dialSlice.actions;
 export default dialSlice.reducer;
 
 export const selectCurrentLead = (state) => state.dial.currentLead;

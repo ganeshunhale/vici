@@ -13,6 +13,7 @@ const TotalDialsToday = ({ overview }) => {
   const { data: TodaysDialsData, isLoading } = useGetTotalDialsTodayQuery(undefined, {
     pollingInterval: 30000,
     skipPollingIfUnfocused: true,
+    
   });
   const location = useLocation();
   const isCallPage = location.pathname === "/call";
@@ -23,7 +24,7 @@ const TotalDialsToday = ({ overview }) => {
 
 
   const {
-    call_date,
+    // call_date,
     total_dials,
     connected_calls,
     connection_rate_pct,
@@ -33,11 +34,11 @@ const TotalDialsToday = ({ overview }) => {
 
   } = TodaysDialsData?.data?.[0] || {};
 
-  console.log('TodaysDialsData', TodaysDialsData, call_date);
+  // console.log('TodaysDialsData', TodaysDialsData, call_date);
 
   // Define KPIs dynamically
   const kpis = [
-    { label: 'Call Date', value: call_date, icon: Phone, trend: '+3.2%', color: 'blue' }, // optional, if needed
+    // { label: 'Call Date', value: call_date, icon: Phone, trend: '+3.2%', color: 'blue' }, // optional, if needed
     { label: 'Total Dials Today', value: total_dials, icon: PhoneIncoming, trend: '+16%', color: 'blue' },
     { label: 'Connected Calls', value: connected_calls, icon: Clock, trend: 'queue', color: 'amber' },
     { label: 'Connection Rate(%)', value: connection_rate_pct, icon: Clock, trend: 'stable', color: 'slate' },

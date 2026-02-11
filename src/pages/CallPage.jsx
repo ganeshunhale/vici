@@ -70,7 +70,7 @@ export default function CallPage() {
         </div>
 
         <div className="lg:col-span-8">
-          <ContactDetails />
+          <ContactDetails inCallLogData={logData?.inCall}/>
         </div>
         <div className="lg:col-span-4">
           <AgentLeadsPanel />

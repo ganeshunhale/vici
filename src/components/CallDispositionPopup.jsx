@@ -344,7 +344,7 @@ console.log("details",res?.details )
               {submitting ? "Saving..." : "Submit & Close"}
             </button>
 
-            {!isCallbackDialed && <button
+            {/* {!isCallbackDialed && <button
               onClick={handleWrapAndNext}
               disabled={!canSubmit || submitting }
               className="w-full md:w-1/2 rounded-xl border border-rose-300/15 px-4 py-3 font-semibold
@@ -353,7 +353,7 @@ console.log("details",res?.details )
                          transition disabled:opacity-50"
             >
               {isDialing ? "Dialing..." : "Wrap & Go To Next Call →"}
-            </button>}
+            </button>} */}
           </div>
 
           {/* tiny hint like your app */}

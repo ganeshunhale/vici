@@ -1,6 +1,6 @@
-import { Upload, FileSpreadsheet, ListOrdered, Phone } from "lucide-react";
+import { Upload, FileSpreadsheet, ListOrdered, Phone, Trash2 } from "lucide-react";
 import { AgGridReact } from "ag-grid-react";
-import { useMemo, useRef, useState ,useEffect, memo,useCallback} from "react";
+import { useMemo, useRef, useState, useEffect, memo, useCallback } from "react";
 import {
   useUploadExcelLeadsMutation,
   useGetLeadsQuery,
@@ -8,11 +8,13 @@ import {
   useDialNextMutation,
   useCallHangupMutation,
   useGetCampaignsQuery,
+  useDeleteLeadMutation,
 } from "../services/dashboardApi";
 import { AllCommunityModule, ModuleRegistry, themeQuartz } from "ag-grid-community";
 import { useToast } from "../customHooks/useToast";
 import DatePicker from "react-datepicker";
 import CallDispositionPopup from "../components/CallDispositionPopup";
+import ConfirmDeletePopup from "../components/ConfimDeletePopup";
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
@@ -37,6 +39,28 @@ const CallCellRenderer = memo((props) => {
     </button>
   );
 });
+
+const DeleteCellRenderer = memo((props) => {
+  const { onDeleteLead, deletingId } = props.context || {};
+  const phone = props.data?.phone_number;
+
+  const isDeleting = deletingId === phone;
+
+  return (
+    <button
+      onClick={() => onDeleteLead(props.data)}
+      disabled={isDeleting}
+      className={`px-2 py-1 rounded flex items-center gap-1 text-xs
+        bg-rose-600/20 text-rose-300 hover:opacity-80
+        disabled:opacity-50 disabled:cursor-not-allowed
+      `}
+      title="Delete lead"
+    >
+      <Trash2 size={14} />
+      {isDeleting ? "Deleting..." : "Delete"}
+    </button>
+  );
+});
 export default function LeadsUploadPage() {
   const fileInputRef = useRef(null);
   const gridRef = useRef(null);
@@ -47,126 +71,128 @@ export default function LeadsUploadPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [activeNumber, setActiveNumber] = useState(null);
-const [polling, setPolling] = useState(false);
-const [showDispo, setShowDispo] = useState(false);
-const [dialNext] = useDialNextMutation();
-const [callHangup]= useCallHangupMutation()
-const [selectedCampaign, setSelectedCampaign] = useState(null); 
+  const [polling, setPolling] = useState(false);
+  const [showDispo, setShowDispo] = useState(false);
+  const [dialNext] = useDialNextMutation();
+  const [callHangup] = useCallHangupMutation()
+  const [selectedCampaign, setSelectedCampaign] = useState(null);
+  const [deleteLead] = useDeleteLeadMutation();
+  const [deleteTarget, setDeleteTarget] = useState(null); // row object
+  const [deletingId, setDeletingId] = useState(null); // phone_number
+  const user = JSON.parse(localStorage.getItem("user"))?.user;
 
-const user = JSON.parse(localStorage.getItem("user"))?.user;
+  const { data: logData } = useGetLogDataQuery(user, {
+    skip: !polling,
+    pollingInterval: 5000,
+  });
+  const { data: campaingList, isLoading: campaingListLoading } = useGetCampaignsQuery();
+  const { success, error, info } = useToast();
+  const today = new Date()
 
-const { data: logData } = useGetLogDataQuery(user, {
-  skip: !polling,
-  pollingInterval: 5000,
-});
-const {data:campaingList,isLoading:campaingListLoading}= useGetCampaignsQuery();
-  const { success, error ,info} = useToast();
-   const today = new Date()
-  
-      const [startDate, setStartDate] = useState(new Date());
-      const [endDate, setEndDate] = useState(new Date());
-      
+  const [startDate, setStartDate] = useState(new Date());
+  const [endDate, setEndDate] = useState(new Date());
+
 
   const [uploadExcel, { isLoading: uploading }] =
     useUploadExcelLeadsMutation();
 
   const { data, isFetching } = useGetLeadsQuery(
-           {
-              sd: startDate.toISOString().split("T")[0],
-              ed: endDate.toISOString().split("T")[0],
-              limit:pageSize
-            }
-          , // no params if both are today
-        {
-          pollingInterval: 30000,
-          skipPollingIfUnfocused: true,
-        });
+    {
+      sd: startDate.toISOString().split("T")[0],
+      ed: endDate.toISOString().split("T")[0],
+      limit: pageSize
+    }
+    , // no params if both are today
+    {
+      pollingInterval: 30000,
+      skipPollingIfUnfocused: true,
+    });
 
   const rowData = data?.leads || [];
   const totalRows = data?.count || 0;
 
   const onUpload = async () => {
-  if (!file || !selectedCampaign) return;
+    if (!file || !selectedCampaign) return;
 
-  const formData = new FormData();
-  formData.append("file", file);
-  formData.append("campaign_id", String(selectedCampaign.id));
-  formData.append("campaign_name", selectedCampaign.name);
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("campaign_id", String(selectedCampaign.id));
+    formData.append("campaign_name", selectedCampaign.name);
 
-  try {
-    const res = await uploadExcel(formData).unwrap();
+    try {
+      const res = await uploadExcel(formData).unwrap();
 
-    const skipped = Array.isArray(res?.skipped_details) ? res.skipped_details : [];
-    const listCampaignIssues = Array.isArray(res?.list_and_campaign) ? res.list_and_campaign : [];
+      const skipped = Array.isArray(res?.skipped_details) ? res.skipped_details : [];
+      const listCampaignIssues = Array.isArray(res?.list_and_campaign) ? res.list_and_campaign : [];
 
-    // 1) Nice summary toast
-    const summary = `Total: ${res?.total_rows ?? "—"} | Success: ${res?.success ?? 0} | Failed: ${res?.failed ?? 0} | Skipped: ${res?.skipped ?? 0}`;
-    success(`Upload completed. ${summary}`);
+      // 1) Nice summary toast
+      const summary = `Total: ${res?.total_rows ?? "—"} | Success: ${res?.success ?? 0} | Failed: ${res?.failed ?? 0} | Skipped: ${res?.skipped ?? 0}`;
+      success(`Upload completed. ${summary}`);
 
-    // 2) Skipped details (as you already do, but capped)
-    const MAX_TOASTS = 8;
-    skipped.slice(0, MAX_TOASTS).forEach(({ phone, reason }) => {
-      info(`Skipped: ${phone} — ${reason}`);
-    });
-    if (skipped.length > MAX_TOASTS) {
-      info(`+${skipped.length - MAX_TOASTS} more skipped rows...`);
-    }
-
-    // 3) list_and_campaign (group by reason -> list_ids + row range)
-    if (listCampaignIssues.length) {
-      const grouped = listCampaignIssues.reduce((acc, item) => {
-        const reason = item?.reason ?? "Unknown reason";
-        if (!acc[reason]) acc[reason] = [];
-        acc[reason].push(item);
-        return acc;
-      }, {});
-
-      Object.entries(grouped).forEach(([reason, items]) => {
-        const rows = items
-          .map((x) => Number(x.row))
-          .filter((n) => Number.isFinite(n))
-          .sort((a, b) => a - b);
-
-        const lists = [...new Set(items.map((x) => String(x.list_id)).filter(Boolean))];
-
-        const rowText =
-          rows.length
-            ? rows.length === 1
-              ? `Row ${rows[0]}`
-              : `Rows ${rows[0]}–${rows[rows.length - 1]} (${rows.length})`
-            : `${items.length} rows`;
-
-        const listText = lists.length ? `List: ${lists.join(", ")}` : "";
-
-        error(`⚠️ ${reason} • ${rowText}${listText ? ` • ${listText}` : ""}`);
+      // 2) Skipped details (as you already do, but capped)
+      const MAX_TOASTS = 8;
+      skipped.slice(0, MAX_TOASTS).forEach(({ phone, reason }) => {
+        info(`Skipped: ${phone} — ${reason}`);
       });
-    }
+      if (skipped.length > MAX_TOASTS) {
+        info(`+${skipped.length - MAX_TOASTS} more skipped rows...`);
+      }
 
-    // 4) If NOTHING noteworthy, show a clean success message
-    if (!skipped.length && !listCampaignIssues.length) {
-      success("Leads uploaded successfully!");
-    }
+      // 3) list_and_campaign (group by reason -> list_ids + row range)
+      if (listCampaignIssues.length) {
+        const grouped = listCampaignIssues.reduce((acc, item) => {
+          const reason = item?.reason ?? "Unknown reason";
+          if (!acc[reason]) acc[reason] = [];
+          acc[reason].push(item);
+          return acc;
+        }, {});
 
-    setFile(null);
-    setSelectedCampaign(null);
-    if (fileInputRef.current) fileInputRef.current.value = null;
-  } catch (err) {
-    error("Upload failed, please try again.");
-  }
-};
+        Object.entries(grouped).forEach(([reason, items]) => {
+          const rows = items
+            .map((x) => Number(x.row))
+            .filter((n) => Number.isFinite(n))
+            .sort((a, b) => a - b);
+
+          const lists = [...new Set(items.map((x) => String(x.list_id)).filter(Boolean))];
+
+          const rowText =
+            rows.length
+              ? rows.length === 1
+                ? `Row ${rows[0]}`
+                : `Rows ${rows[0]}–${rows[rows.length - 1]} (${rows.length})`
+              : `${items.length} rows`;
+
+          const listText = lists.length ? `List: ${lists.join(", ")}` : "";
+
+          error(`⚠️ ${reason} • ${rowText}${listText ? ` • ${listText}` : ""}`);
+        });
+      }
+
+      // 4) If NOTHING noteworthy, show a clean success message
+      if (!skipped.length && !listCampaignIssues.length) {
+        success("Leads uploaded successfully!");
+      }
+
+      setFile(null);
+      setSelectedCampaign(null);
+      if (fileInputRef.current) fileInputRef.current.value = null;
+    } catch (err) {
+      error("Upload failed, please try again.");
+    }
+  };
   const StatusRenderer = (params) => {
     const status = params.value;
-  
+
     const base =
       "px-2 py-1 rounded text-xs font-semibold whitespace-nowrap";
-  
+
     const classes = {
       READY: "bg-emerald-500/25 text-emerald-300",
       INCALL: "bg-blue-500/20 text-blue-400",
       PAUSED: "bg-amber-500/20 text-amber-400",
       OFFLINE: "bg-slate-500/20 text-slate-400",
     };
-  
+
     return (
       <span className={`${base} ${classes[status] || "bg-slate-600/20 text-slate-300"}`}>
         {status}
@@ -175,7 +201,7 @@ const {data:campaingList,isLoading:campaingListLoading}= useGetCampaignsQuery();
   };
   const handleRowCall = useCallback(async (number) => {
     if (activeNumber && activeNumber !== number) return;
-  
+
     // DISCONNECT
     if (activeNumber === number) {
       console.log("disconnect by agent");
@@ -184,16 +210,16 @@ const {data:campaingList,isLoading:campaingListLoading}= useGetCampaignsQuery();
       } catch (error) {
         error("Failed to Disconnect Call")
       }
-      
+
       success("Call Disconnected")
       setActiveNumber(null);
-      
+
       return;
     }
-  
+
     try {
       const res = await dialNext(number).unwrap();
-  
+
       if (res?.vicidial_response?.toLowerCase().includes("error")) {
         // alert(res.vicidial_response);
         error(res.vicidial_response);
@@ -215,9 +241,32 @@ const {data:campaingList,isLoading:campaingListLoading}= useGetCampaignsQuery();
     setShowDispo(true);
     setActiveNumber(null);
   }, [logData]);
-  
 
-  
+  const onDeleteLead = useCallback((lead) => {
+    // optional safety: don't allow delete while call active on same number
+    if (activeNumber && lead?.phone_number === activeNumber) {
+      error("Cannot delete lead while call is active");
+      return;
+    }
+    setDeleteTarget(lead);
+  }, [activeNumber, error]);
+
+  const handleConfirmDelete = useCallback(async () => {
+    const phone = deleteTarget?.phone_number;
+    if (!phone) return;
+
+    try {
+      setDeletingId(phone);
+      await deleteLead(phone).unwrap(); // ✅ send phone_number
+      success(`Lead ${phone} deleted`);
+      setDeleteTarget(null);
+    } catch (e) {
+      error("Failed to delete lead");
+    } finally {
+      setDeletingId(null);
+    }
+  }, [deleteTarget, deleteLead, success, error]);
+
   const columnDefs = useMemo(
     () => [
       {
@@ -232,7 +281,7 @@ const {data:campaingList,isLoading:campaingListLoading}= useGetCampaignsQuery();
         field: "phone_number",
         minWidth: 150,
         cellClass: "font-mono text-slate-300",
-        filter:true
+        filter: true
       },
       {
         headerName: "USER",
@@ -288,6 +337,18 @@ const {data:campaingList,isLoading:campaingListLoading}= useGetCampaignsQuery();
       //   suppressMovable: true,
       //   cellRenderer: CallCellRenderer,   // ✅ use component directly
       // },
+      {
+        headerName: "DELETE",
+        colId: "delete",
+        minWidth: 120,
+        maxWidth: 130,
+        pinned: "right",
+        lockPinned: true,
+        suppressMovable: true,
+        sortable: false,
+        filter: false,
+        cellRenderer: DeleteCellRenderer,
+      },
     ],
     []
   );
@@ -295,8 +356,10 @@ const {data:campaingList,isLoading:campaingListLoading}= useGetCampaignsQuery();
     () => ({
       activeNumber,
       handleRowCall,
+      onDeleteLead,
+      deletingId,
     }),
-    [activeNumber, handleRowCall]
+    [activeNumber, handleRowCall, onDeleteLead, deletingId]
   );
 
   const defaultColDef = useMemo(
@@ -311,7 +374,7 @@ const {data:campaingList,isLoading:campaingListLoading}= useGetCampaignsQuery();
   );
   useEffect(() => {
     if (!gridRef.current?.api) return;
-  
+
     gridRef.current.api.refreshCells({
       columns: ["call"], // colId
       force: true,
@@ -322,10 +385,10 @@ const {data:campaingList,isLoading:campaingListLoading}= useGetCampaignsQuery();
   const onPaginationChanged = (event) => {
     const api = event.api;
     if (!api) return;
-  
+
     const clickedPage = api.paginationGetCurrentPage() + 1; // 1-based
     const selectedPageSize = api.paginationGetPageSize();
-  
+
     // Always trigger API on page size selection or page click
     setPageSize(selectedPageSize);
     setPage(clickedPage);
@@ -340,7 +403,7 @@ const {data:campaingList,isLoading:campaingListLoading}= useGetCampaignsQuery();
         borderColor: "rgba(30,41,59,0.4)",
         rowHoverColor: "rgba(30,41,59,0.4)",
         oddRowBackgroundColor: "rgba(2,6,23,0.45)",
-        
+
         headerHeight: 36,
         rowHeight: 34,
       }),
@@ -356,7 +419,7 @@ const {data:campaingList,isLoading:campaingListLoading}= useGetCampaignsQuery();
 
   return (
     <div className="p-4 space-y-6">
-    
+
       {/* Upload Section */}
       <div className="border border-border rounded-xl bg-card/60 p-4 flex justify-between items-center">
         <h3 className="text-lg font-semibold text-white flex items-center gap-2">
@@ -366,24 +429,24 @@ const {data:campaingList,isLoading:campaingListLoading}= useGetCampaignsQuery();
 
         <div className="flex flex-wrap items-center justify-end gap-4 ">
           <div className="flex flex-wrap items-center gap-4" >
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".xlsx,.xls"
-            hidden
-            onChange={(e) => setFile(e.target.files[0])}
-          />
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".xlsx,.xls"
+              hidden
+              onChange={(e) => setFile(e.target.files[0])}
+            />
 
-          <button
-            onClick={() => fileInputRef.current.click()}
-            className="px-4 py-2 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm border border-slate-700"
-          >
-            Choose File
-          </button>
+            <button
+              onClick={() => fileInputRef.current.click()}
+              className="px-4 py-2 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm border border-slate-700"
+            >
+              Choose File
+            </button>
 
-          <span className="text-sm text-slate-400">
-            {file ? file.name : "No file selected"}
-          </span>
+            <span className="text-sm text-slate-400">
+              {file ? file.name : "No file selected"}
+            </span>
           </div>
 
           <select
@@ -406,7 +469,7 @@ const {data:campaingList,isLoading:campaingListLoading}= useGetCampaignsQuery();
               </option>
             ))}
           </select>
-        {/* </div> */}
+          {/* </div> */}
 
           <button
             onClick={onUpload}
@@ -421,42 +484,67 @@ const {data:campaingList,isLoading:campaingListLoading}= useGetCampaignsQuery();
 
       {/* Table Section */}
       <div className="border border-border rounded-xl bg-card/60 p-4">
-      {/* <h3 className="text-lg font-semibold text-white flex items-center gap-2 mb-4">
+        {/* <h3 className="text-lg font-semibold text-white flex items-center gap-2 mb-4">
           <ListOrdered className="w-4 h-4 text-emerald-400" />
           Leads 
         </h3> */}
-        <div className="flex justify-between mb-2">
-            <h3 className="text-xl flex items-center gap-2 font-semibold text-white"><ListOrdered className="w-4 h-4 text-emerald-400" />
-            Leads </h3>
-            <div className="flex items-center gap-2 ">
-                <span className="text-sm text-slate-400">From:</span>
-                <DatePicker
-                  selected={startDate}
-                  onChange={(date) => setStartDate(date)}
-                  selectsStart
-                  startDate={startDate}
-                  endDate={endDate}
-                  maxDate={endDate||today} // cannot select future dates
-                  className="bg-input border border-border text-foreground text-sm rounded px-2 py-1 w-24"
-                  popperClassName="z-50 dark-datepicker"
-                />
-        
-                <span className="text-sm text-slate-400">To:</span>
-                <DatePicker
-                  selected={endDate}
-                  onChange={(date) => setEndDate(date)}
-                  selectsEnd
-                  startDate={startDate}
-                  endDate={endDate}
-                  minDate={startDate}
-                  popperPlacement="bottom-start"
-                  
-                  maxDate={today} // cannot select future dates
-                  popperClassName="z-50 dark-datepicker"
-                  className="bg-input border border-border text-foreground text-sm rounded px-2 py-1 w-24"
-                />
-              </div>
-          </div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-2">
+  <h3 className="text-xl flex items-center gap-2 font-semibold text-white">
+    <ListOrdered className="w-4 h-4 text-emerald-400" />
+    Leads
+  </h3>
+
+  {/* Right controls */}
+  <div className="flex flex-wrap items-center gap-3 justify-end">
+    {/* From */}
+    <div className="flex items-center gap-2">
+      <span className="text-sm text-slate-400">From:</span>
+      <DatePicker
+        selected={startDate}
+        onChange={(date) => setStartDate(date)}
+        selectsStart
+        startDate={startDate}
+        endDate={endDate}
+        maxDate={endDate || today}
+        className="bg-input border border-border text-foreground text-sm rounded px-2 py-1 w-24"
+        popperClassName="z-50 dark-datepicker"
+      />
+    </div>
+
+    {/* To */}
+    <div className="flex items-center gap-2">
+      <span className="text-sm text-slate-400">To:</span>
+      <DatePicker
+        selected={endDate}
+        onChange={(date) => setEndDate(date)}
+        selectsEnd
+        startDate={startDate}
+        endDate={endDate}
+        minDate={startDate}
+        maxDate={today}
+        popperPlacement="bottom-start"
+        popperClassName="z-50 dark-datepicker"
+        className="bg-input border border-border text-foreground text-sm rounded px-2 py-1 w-24"
+      />
+    </div>
+
+    {/* Rows */}
+    <div className="flex items-center gap-2">
+      <span className="text-sm text-slate-400">Rows:</span>
+      <select
+        value={pageSize}
+        onChange={(e) => setPageSize(Number(e.target.value))}
+        className="bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded px-2 py-1 min-w-[90px]"
+      >
+        {[10, 25, 50, 100, 200, 500, 1000, 5000].map((n) => (
+          <option key={n} value={n}>
+            {n}
+          </option>
+        ))}
+      </select>
+    </div>
+  </div>
+</div>
         <div className="h-[480px]">
           <AgGridReact
             ref={gridRef}
@@ -464,24 +552,33 @@ const {data:campaingList,isLoading:campaingListLoading}= useGetCampaignsQuery();
             columnDefs={columnDefs}
             defaultColDef={defaultColDef}
             theme={agTheme}
-            pagination
-            paginationPageSize={pageSize}
-            paginationPageSizeSelector={[10, 25, 50, 100,200]}
+            // pagination
+            // paginationPageSize={pageSize}
+            // paginationPageSizeSelector={[10, 25, 50, 100,200,500,1000,2000,5000]}
+            // suppressPaginationPanel={false}
             rowCount={totalRows}
-            rowClassRules={rowClassRules} 
+            rowClassRules={rowClassRules}
             getRowId={(p) => p.data.phone_number}
-            context={gridContext}  
+            context={gridContext}
             suppressRowClickSelection
             suppressCellFocus
             loading={isFetching}
-            onPaginationChanged={onPaginationChanged}
-            
+          // onPaginationChanged={onPaginationChanged}
+
           />
         </div>
       </div>
       {/* {showDispo && (
   <CallDispositionPopup closeDispo={()=>setShowDispo(false)} />
 )} */}
+      <ConfirmDeletePopup
+        open={!!deleteTarget}
+        title="Delete Lead"
+        message={`Are you sure you want to delete lead with phone number ${deleteTarget?.phone_number}?`}
+        loading={deletingId === deleteTarget?.phone_number}
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }

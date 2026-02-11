@@ -1,23 +1,69 @@
-import { useMemo, useState } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Loader2, PhoneOff, X, MoreHorizontal, Pencil, Calendar, Building2, BadgeInfo } from "lucide-react";
-import { selectCurrentLead } from "../slices/dialSlice";
-import { CALL_STATE, selectCallState, setCallState } from "../slices/callSlice";
-import { useCallHangupMutation } from "../services/dashboardApi";
+import { Loader2, PhoneOff, X, MoreHorizontal, Pencil, Calendar, Building2, BadgeInfo, Phone } from "lucide-react";
+import { selectCurrentLead, setCurrentLead } from "../slices/dialSlice";
+import { CALL_STATE, selectCallState, selectIsCallBusy, setCallState, setIsCallbackDial } from "../slices/callSlice";
+import { useCallHangupMutation, useDialNextMutation } from "../services/dashboardApi";
+function normalizePhone(raw) {
+  if (!raw) return "";
+  // keep + and digits
+  return String(raw).replace(/[^\d+]/g, "").trim();
+}
 
-export default function ContactDetails() {
+function isValidPhone(p) {
+  // basic: must have at least 6 digits
+  const digits = String(p || "").replace(/[^\d]/g, "");
+  return digits.length >= 6;
+}
+const MANUAL_DEFAULT_LEAD = {
+  phone_number: "",
+  first_name: "Manual",
+  last_name: "Call",
+  city: "—",
+  lead_id: "—",
+  entry_date: "—",
+  list_id: "—",
+};
+
+function buildManualLead(details, phone) {
+  const d = details && typeof details === "object" ? details : {};
+
+  const out = {
+    ...MANUAL_DEFAULT_LEAD,
+    ...d, // take whatever backend gives
+  };
+
+  // always override with the number the agent typed
+  out.phone_number = phone;
+
+  // ensure key fields are not empty/undefined
+  if (!out.first_name?.trim?.()) out.first_name = "Manual";
+  if (!out.last_name?.trim?.()) out.last_name = "Call";
+
+  // city can be empty => show —
+  if (!out.city?.trim?.()) out.city = "—";
+
+  // ids/dates/list should not be undefined/null
+  if (out.lead_id === null || out.lead_id === undefined || out.lead_id === "") out.lead_id = "—";
+  if (!out.entry_date) out.entry_date = "—";
+  if (out.list_id === null || out.list_id === undefined || out.list_id === "") out.list_id = "—";
+
+  return out;
+}
+function ContactDetails({inCallLogData}) {
   const dispatch = useDispatch();
 
   const lead = useSelector(selectCurrentLead);
   const callState = useSelector(selectCallState);
-
+  const isCallBusy = useSelector(selectIsCallBusy);
   const [callHangup, { isLoading: isHangingUp }] = useCallHangupMutation();
+  const [dialNext, { isLoading: isDialing }] = useDialNextMutation();
   const [notes, setNotes] = useState("");
-
+  const [manualPhone, setManualPhone] = useState("");
   const isInCall = callState === CALL_STATE.INCALL;
   const isEnding = callState === CALL_STATE.ENDING;
   const isBusy = isHangingUp || callState === CALL_STATE.DIALING;
-
+  const disabledAll = isDialing || isCallBusy;
   const initials = useMemo(() => {
     const a = lead?.first_name?.[0] ?? "";
     const b = lead?.last_name?.[0] ?? "";
@@ -34,8 +80,35 @@ export default function ContactDetails() {
     return city ? city : "—";
   }, [lead]);
 
+  const handleManualDial = useCallback(async () => {
+    try {
+      const phone = normalizePhone(manualPhone);
+      if (!phone || !isValidPhone(phone)) {
+        alert("Please enter a valid phone number.");
+        return;
+      }
+
+      dispatch(setCallState(CALL_STATE.DIALING));
+
+      const res = await dialNext({ phone }).unwrap();
+
+      if (res?.vicidial_response?.toLowerCase?.().includes("error")) {
+        alert(res.vicidial_response);
+        dispatch(setCallState(CALL_STATE.IDLE));
+        return;
+      }
+      const safeLead = buildManualLead(res?.details, phone);
+      dispatch(setCurrentLead(safeLead));
+      dispatch(setIsCallbackDial(false)); // ✅ manual call
+      dispatch(setCallState(CALL_STATE.INCALL));
+    } catch (e) {
+      dispatch(setCallState(CALL_STATE.IDLE));
+      alert("Failed to dial. Please try again.");
+    }
+  }, [manualPhone, dialNext, dispatch, lead]);
+
   const handleEndCall = async () => {
-    if (!isInCall) return;
+    if (!isInCall && !inCallLogData) return;
 
     dispatch(setCallState(CALL_STATE.ENDING)); // ✅ keep log polling ON
     try {
@@ -46,7 +119,7 @@ export default function ContactDetails() {
       alert("Failed to end call.");
     }
   };
-
+  const manualHasNumber = isValidPhone(normalizePhone(manualPhone));
   return (
     <div
       className="relative overflow-hidden rounded-2xl border border-white/10
@@ -63,14 +136,52 @@ export default function ContactDetails() {
           <div className="text-sm font-semibold tracking-wide">Contact Details</div>
         </div>
 
-        {/* <div className="flex items-center gap-2">
-          <button className="h-9 w-9 grid place-items-center rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 transition">
-            <MoreHorizontal className="w-4 h-4 text-slate-200" />
+        <div className="flex items-center gap-2">
+          <input
+            value={manualPhone}
+            onChange={(e) => setManualPhone(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !disabledAll && manualHasNumber) handleManualDial();
+            }}
+            placeholder="Manual dial number…"
+            className="w-full md:w-56 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs
+                       text-slate-100 placeholder:text-slate-500
+                       focus:outline-none focus:ring-2 focus:ring-sky-500/25"
+          />
+
+          <button
+            type="button"
+            disabled={disabledAll || !manualHasNumber}
+            onClick={handleManualDial}
+            className={[
+              "inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold",
+              "border transition-colors",
+              disabledAll || !manualHasNumber
+                ? "border-white/10 bg-white/5 text-slate-500 cursor-not-allowed"
+                : "border-emerald-600/40 bg-emerald-600/20 text-emerald-200 hover:bg-emerald-600/30 hover:text-emerald-100 active:bg-emerald-600/40",
+            ].join(" ")}
+            title={
+              !manualHasNumber
+                ? "Enter a valid number"
+                : disabledAll
+                ? "Dialing or call busy"
+                : "Call this number"
+            }
+          >
+            {isDialing ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Calling…
+              </>
+            ) : (
+              <>
+                <Phone className="h-4 w-4" />
+                Call
+              </>
+            )}
           </button>
-          <button className="h-9 w-9 grid place-items-center rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 transition">
-            <X className="w-4 h-4 text-slate-200" />
-          </button>
-        </div> */}
+        </div>
+        
       </div>
 
       {/* Main */}
@@ -200,7 +311,7 @@ export default function ContactDetails() {
               {/* END CALL (real logic) */}
               <button
                 onClick={handleEndCall}
-                disabled={!lead || !isInCall || isBusy || callState === CALL_STATE.DISPO}
+                disabled={!lead || !isInCall || isBusy || callState === CALL_STATE.DISPO || !inCallLogData}
                 className={`rounded-xl border px-5 py-2.5 font-semibold flex items-center justify-center gap-2 transition
                   ${
                     isInCall || isEnding
@@ -228,3 +339,5 @@ export default function ContactDetails() {
     </div>
   );
 }
+
+export default memo(ContactDetails);
