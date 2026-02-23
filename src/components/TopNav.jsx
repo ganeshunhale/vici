@@ -11,6 +11,7 @@ import dayjs from "dayjs"
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { selectDateRange, setDateRange } from "../slices/dateFilterSlice";
+import { useVicidialPopup } from "../context/VicidialPopupContext";
 
 const adminNavItems = [
   { name: "Dashboard", path: "/" },
@@ -41,7 +42,7 @@ export default function TopNav() {
   const isAdmin = useSelector(selectIsAdmin);
   const roleLabel = useSelector(selectRoleLabel);
   const userName = useSelector(selectUserName);
-
+  const { closePopup } = useVicidialPopup();
   const isCallBusy = useSelector(selectIsCallBusy);
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -78,6 +79,7 @@ export default function TopNav() {
   }, [isAdmin]);
 
   const handleLogout = () => {
+    closePopup();
     dispatch(clearUser());
     navigate("/login", { replace: true });
   };

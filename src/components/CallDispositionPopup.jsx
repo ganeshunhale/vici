@@ -4,10 +4,12 @@ import "react-datepicker/dist/react-datepicker.css";
 
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-
+import { MessageCircle } from "lucide-react";
 import { useSubmitStatusMutation, useDialNextMutation } from "../services/dashboardApi";
 import {  CALL_STATE, selectIsCallBusy, setCallState ,selectIsCallbackDial} from "../slices/callSlice";
-import { clearCurrentLead, setCurrentLead } from "../slices/dialSlice";
+import { clearCurrentLead, selectCurrentLead, setCurrentLead } from "../slices/dialSlice";
+
+
 
 const DISPOSITIONS = [
   { label: "Busy", value: "B" },
@@ -50,7 +52,17 @@ const isCallbackDialed = useSelector(selectIsCallbackDial)
   const [sendReminderEmail, setSendReminderEmail] = useState(false);
 
   const isCallback = selectedStatus?.value === "CBR";
+  const lead = useSelector(selectCurrentLead);
 
+  const phoneNumber = lead?.phone_number
+    ? lead.phone_number.replace(/\D/g, "") // remove +, spaces, etc.
+    : null;
+  
+  const handleWhatsApp = () => {
+    if (!phoneNumber) return;
+    const url = `https://wa.me/${phoneNumber}`;
+    window.open(url, "_blank");
+  };
   const canSubmit = useMemo(() => {
     if (!selectedStatus) return false;
     if (!isCallback) return true;
@@ -333,18 +345,34 @@ console.log("details",res?.details )
         </div>
 
         {/* Footer buttons */}
-        <div className="px-6 py-5 border-t border-white/10 bg-slate-950/25">
-          <div className="flex flex-col md:flex-row gap-3">
-            <button
-              onClick={handleSubmitAndClose}
-              disabled={!canSubmit || submitting || isDialing}
-              className="w-full md:w-1/2 rounded-xl border border-white/10 bg-slate-950/20 px-4 py-3
-                         text-slate-100 font-semibold hover:bg-slate-950/35 transition disabled:opacity-50"
-            >
-              {submitting ? "Saving..." : "Submit & Close"}
-            </button>
+        {/* Footer buttons */}
+<div className="px-6 py-5 border-t border-white/10 bg-slate-950/25">
+  <div className="flex flex-col md:flex-row gap-3">
+    {/* Submit */}
+    <button
+      onClick={handleSubmitAndClose}
+      disabled={!canSubmit || submitting || isDialing}
+      className="w-full md:w-1/2 rounded-xl border border-white/10 bg-slate-950/20 px-4 py-3
+                 text-slate-100 font-semibold hover:bg-slate-950/35 transition disabled:opacity-50"
+    >
+      {submitting ? "Saving..." : "Submit & Close"}
+    </button>
 
-            {/* {!isCallbackDialed && <button
+    {/* WhatsApp */}
+    <button
+  onClick={handleWhatsApp}
+  // disabled={!phoneNumber}
+  disabled={true}
+  className="w-full md:w-1/2 flex items-center justify-center gap-2
+             rounded-xl px-4 py-3 font-semibold
+             bg-[#25D366] text-white
+             hover:bg-[#1EBE5D]
+             transition disabled:opacity-40"
+>
+  <MessageCircle size={18} strokeWidth={2.2} />
+  <span>WhatsApp</span>
+</button>
+    {/* {!isCallbackDialed && <button
               onClick={handleWrapAndNext}
               disabled={!canSubmit || submitting }
               className="w-full md:w-1/2 rounded-xl border border-rose-300/15 px-4 py-3 font-semibold
@@ -354,13 +382,14 @@ console.log("details",res?.details )
             >
               {isDialing ? "Dialing..." : "Wrap & Go To Next Call →"}
             </button>} */}
-          </div>
+  </div>
 
-          {/* tiny hint like your app */}
-          <div className="mt-3 text-xs text-slate-500">
-            Tip: Callback requires date &amp; time.
-          </div>
-        </div>
+  {/* tiny hint */}
+  <div className="mt-3 text-xs text-slate-500">
+    Tip: Callback requires date &amp; time.
+  </div>
+</div>
+
       </div>
     </div>
   );

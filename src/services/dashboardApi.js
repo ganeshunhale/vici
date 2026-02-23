@@ -228,12 +228,15 @@ export const dashboardApi = createApi({
     deleteLead: builder.mutation({
       // adjust this URL to match your backend
       // option A: delete by lead_id
-      query: (phone_number) => ({
+      query: (phones ) => ({
         url: "/delete_lead",
-        
-        params: { phone_number },
+        method: "POST",
+        body: { phone_number: phones }
       }),
       invalidatesTags: ["Leads"],
+    }),
+    statusData: builder.query({
+      query: () => "/status_data",
     }),
   }),
 });
@@ -264,4 +267,5 @@ export const {
   useUserTimelineQuery,
   useGetCampaignsQuery,
   useDeleteLeadMutation,
+  useStatusDataQuery
 } = dashboardApi;

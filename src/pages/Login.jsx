@@ -5,6 +5,7 @@ import { useGetCampaignsQuery, useLoginMutation } from "../services/dashboardApi
 import { setUser } from "../slices/authSlice";
 import { useDispatch } from "react-redux";
 import { Eye, EyeOff } from "lucide-react";
+import { useVicidialPopup } from "../context/VicidialPopupContext";
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -12,10 +13,10 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [role, setRole] = useState("agent"); // ✅ user chooses: "admin" | "agent"
   const [isSelectOpen, setIsSelectOpen] = useState(false);
-
+  const vicidialPopupRef = useRef(null);
   const from = location.state?.from?.pathname;
   const [login, { isLoading }] = useLoginMutation();
-
+  const { openPopup } = useVicidialPopup();
   // ✅ only fetch campaigns when agent
   const { data: campaingList, isLoading: campaingListLoading } = useGetCampaignsQuery(undefined, {
     skip: role !== "agent",
@@ -76,7 +77,34 @@ export default function Login() {
       const res = await login(payload).unwrap();
 
       // localStorage.setItem("access_token", res.access_token);
+      if (role === "agent") {
+        // const features = [
+        //   "width=1100",
+        //   "height=750",
+        //   "left=100",
+        //   "top=50",
+        //   "resizable=yes",
+        //   "scrollbars=yes",
+        //   "toolbar=no",
+        //   "menubar=no",
+        //   "status=no",
+        // ].join(",");
+  
+        // if (
+        //   !vicidialPopupRef.current ||
+        //   vicidialPopupRef.current.closed
+        // ) {
+        //   vicidialPopupRef.current = window.open(
+        //     "http://192.168.15.165/agc/vicidial.php",
+        //     "VICIDIAL_POPUP",
+        //     features
+        //   );
+        // } else {
+        //   vicidialPopupRef.current.focus();
+        // }
 
+        openPopup();
+      }
       // ✅ store auth details (role always, campaign only for agent)
       sessionStorage.setItem(
         "vicidial_auth",

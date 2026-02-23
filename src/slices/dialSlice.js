@@ -3,7 +3,7 @@ import dayjs from "dayjs"
 
 const initialState = {
   currentLead: null, // <-- will store response.details
-  isPaused: false,
+  isPaused: true,
   isAvailableLeads:false,
   autoDialTime: dayjs().add(30, "seconds").valueOf()
 };

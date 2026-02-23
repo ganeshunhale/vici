@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import ContactDetails from "../components/ContactDetails";
 import CallDispositionPopup from "../components/CallDispositionPopup";
 
-import { useGetLogDataQuery, usePingQuery } from "../services/dashboardApi";
+import { useGetLogDataQuery, usePingQuery, useStatusDataQuery } from "../services/dashboardApi";
 import { closeDispo, openDispo, CALL_STATE, selectCallState, selectShowDispo, setIsCallbackDial, } from "../slices/callSlice";
 import { selectIsAdmin, selectUser } from "../slices/authSlice";
 import { clearCurrentLead } from "../slices/dialSlice";
@@ -28,32 +28,54 @@ export default function CallPage() {
   const callState = useSelector(selectCallState);
   const showDispo = useSelector(selectShowDispo);
 
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (!showDispo) return;
+  
+      e.preventDefault();
+      e.returnValue = ""; // required for Chrome
+    };
+  
+    window.addEventListener("beforeunload", handleBeforeUnload);
+  
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [showDispo]);
   const shouldPollLog = callState === CALL_STATE.INCALL || callState === CALL_STATE.ENDING;
   const [pollingEnabled, setPollingEnabled] = useState(false);
 
 
-  const { data: logData } = useGetLogDataQuery(user.user, {
-    skip: !pollingEnabled,
-    pollingInterval: pollingEnabled ? 2000 : 0,
+  // const { data: logData } = useGetLogDataQuery(user.user, {
+  //   skip: !pollingEnabled,
+  //   pollingInterval: pollingEnabled ? 2000 : 0,
+  //   refetchOnMountOrArgChange: true,
+  // });
+  const { data: callStatusData } = useStatusDataQuery(undefined, {
+    skip: !shouldPollLog,
+    pollingInterval: 2000 ,
     refetchOnMountOrArgChange: true,
   });
+const InCall_ReadyToDisconnect = shouldPollLog&& callStatusData? callStatusData?.data?.call_status === "IN_CALL" || callStatusData?.data?.call_status === "RINGING" : false
+  // useEffect(() => {
+  //   if (!shouldPollLog) return setPollingEnabled(false);
+
+  //   const t = setTimeout(() => {
+  //     setPollingEnabled(true);
+  //   }, 10000); // 5 sec delay
+
+  //   return () => clearTimeout(t);
+  // }, [shouldPollLog]);
 
   useEffect(() => {
-    if (!shouldPollLog) return setPollingEnabled(false);
-
-    const t = setTimeout(() => {
-      setPollingEnabled(true);
-    }, 10000); // 5 sec delay
-
-    return () => clearTimeout(t);
-  }, [shouldPollLog]);
-
-  useEffect(() => {
-    console.log({logData, isAdmin})
-    if(!logData || isAdmin) return
-    if (logData?.inCall) return;
+    
+    
+    if(!callStatusData || isAdmin) return
+    console.log({callStatus:callStatusData.data.call_status, isAdmin})
+    if (callStatusData.data?.call_status !=="DISPOSITION_PENDING") return;
     dispatch(openDispo());
-  }, [logData, dispatch, isAdmin]);
+  }, [ dispatch, isAdmin,callStatusData]);
+
 
   const handleCloseDispo = () => {
     dispatch(closeDispo());        // back to IDLE
@@ -70,7 +92,7 @@ export default function CallPage() {
         </div>
 
         <div className="lg:col-span-8">
-          <ContactDetails inCallLogData={logData?.inCall}/>
+          <ContactDetails inCallLogData={InCall_ReadyToDisconnect}/>
         </div>
         <div className="lg:col-span-4">
           <AgentLeadsPanel />
