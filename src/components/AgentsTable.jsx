@@ -9,10 +9,10 @@ ModuleRegistry.registerModules([AllCommunityModule]);
 
 export function AgentsTable() {
   const { data = [] } =
-      useGetAgentsProductivityQuery(undefined, {
-        pollingInterval:  30000,
-        skipPollingIfUnfocused: true,
-      });
+    useGetAgentsProductivityQuery(undefined, {
+      pollingInterval: 30000,
+      skipPollingIfUnfocused: true,
+    });
   const rowData = data?.data || [];
   const hhmmssToMinutes = (time) => {
     if (!time) return 0;
@@ -20,14 +20,14 @@ export function AgentsTable() {
     return hh * 60 + mm + ss / 60;
   };
   const StatusRenderer = (params) => {
-    const status = params.value;
+    const status = params.value ?? "OFFLINE";
     const talkTime = params.data?.TALK_TIME_HH_MM_SS;
-  
+
     const minutes = hhmmssToMinutes(talkTime);
-  
+
     let className =
       "px-2 py-1 rounded text-xs font-semibold whitespace-nowrap";
-  
+
     if (status === "PAUSED") {
       if (minutes < 3) {
         className += " bg-emerald-500/20 text-emerald-400";
@@ -43,13 +43,56 @@ export function AgentsTable() {
         INCALL: " bg-blue-500/20 text-blue-400",
         OFFLINE: " bg-slate-500/20 text-slate-400",
       };
-  
+
       className += statusClasses[status] ||
         " bg-slate-600/20 text-slate-300";
     }
-  
+
     return <span className={className}>{status}</span>;
   };
+  const StarRenderer = (params) => {
+  const rating = params.value ?? 0;
+  const maxStars = 5;
+
+  return (
+    <div className="flex items-center gap-[2px]">
+      {[...Array(maxStars)].map((_, i) => {
+        const fillPercent = Math.min(Math.max(rating - i, 0), 1) * 100;
+
+        return (
+          <div key={i} className="relative w-4 h-4">
+            {/* Empty star */}
+            <svg viewBox="0 0 24 24" className="absolute w-4 h-4 text-gray-400">
+              <path
+                fill="currentColor"
+                d="M12 17.27L18.18 21l-1.64-7.03
+                L22 9.24l-7.19-.61L12 2
+                9.19 8.63 2 9.24l5.46
+                4.73L5.82 21z"
+              />
+            </svg>
+
+            {/* Filled star (partial) */}
+            <div
+              className="absolute top-0 left-0 overflow-hidden"
+              style={{ width: `${fillPercent}%` }}
+            >
+              <svg viewBox="0 0 24 24" className="w-4 h-4 text-yellow-400">
+                <path
+                  fill="currentColor"
+                  d="M12 17.27L18.18 21l-1.64-7.03
+                  L22 9.24l-7.19-.61L12 2
+                  9.19 8.63 2 9.24l5.46
+                  4.73L5.82 21z"
+                />
+              </svg>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
   const columnDefs = useMemo(
     () => [
       {
@@ -79,6 +122,13 @@ export function AgentsTable() {
         minWidth: 90,
         maxWidth: 100,
         cellRenderer: StatusRenderer,
+      },
+      {
+        headerName: "STARS",
+        field: "avg_stars",
+        minWidth: 90,
+        maxWidth: 110,
+        cellRenderer: StarRenderer,
       },
       {
         headerName: "CALLS",
@@ -159,7 +209,7 @@ export function AgentsTable() {
       {/* Grid */}
       <div className="lg:h-[90%] h-[320px] max-h-full border border-border rounded-sm shadow-[0_8px_30px_rgba(0,0,0,0.45)]">
         <AgGridReact
-        // height="90%%"
+          // height="90%%"
           rowData={rowData}
           columnDefs={columnDefs}
           defaultColDef={defaultColDef}

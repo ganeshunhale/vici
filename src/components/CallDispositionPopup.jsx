@@ -4,11 +4,12 @@ import "react-datepicker/dist/react-datepicker.css";
 
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { MessageCircle } from "lucide-react";
-import { useSubmitStatusMutation, useDialNextMutation } from "../services/dashboardApi";
+import { MessageCircle, MessageSquare } from "lucide-react";
+import { useSubmitStatusMutation, useDialNextMutation, useSendMessageMutation } from "../services/dashboardApi";
 import {  CALL_STATE, selectIsCallBusy, setCallState ,selectIsCallbackDial} from "../slices/callSlice";
 import { clearCurrentLead, selectCurrentLead, setCurrentLead } from "../slices/dialSlice";
-
+import { useToast } from "../customHooks/useToast";
+import { tr } from "date-fns/locale";
 
 
 const DISPOSITIONS = [
@@ -40,11 +41,12 @@ const formatCallbackDateTime = (date) => {
 export default function CallDispositionPopup({ closeDispo, leadName = "Customer" }) {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const { success, error, info } = useToast();
   const isCallBusy = useSelector(selectIsCallBusy);
 const isCallbackDialed = useSelector(selectIsCallbackDial)
   const [submitStatus, { isLoading: submitting }] = useSubmitStatusMutation();
   const [dialNext, { isLoading: isDialing }] = useDialNextMutation();
-
+const [sendMessage] = useSendMessageMutation();
   const [selectedStatus, setSelectedStatus] = useState(null);
 
   const [callbackDateTime, setCallbackDateTime] = useState(null);
@@ -62,6 +64,17 @@ const isCallbackDialed = useSelector(selectIsCallbackDial)
     if (!phoneNumber) return;
     const url = `https://wa.me/${phoneNumber}`;
     window.open(url, "_blank");
+  };
+  const handleSendSMS = async () => {
+    try {
+      if (!phoneNumber) {
+        error("No valid phone number to send SMS.");
+        return};
+      await sendMessage(phoneNumber).unwrap();
+      success("SMS sent successfully");
+    } catch (err) {
+      error("Failed to send SMS");
+    }
   };
   const canSubmit = useMemo(() => {
     if (!selectedStatus) return false;
@@ -347,31 +360,48 @@ console.log("details",res?.details )
         {/* Footer buttons */}
         {/* Footer buttons */}
 <div className="px-6 py-5 border-t border-white/10 bg-slate-950/25">
-  <div className="flex flex-col md:flex-row gap-3">
-    {/* Submit */}
+<div className="flex flex-col md:flex-row gap-3">
+  {/* Submit */}
+  <button
+    onClick={handleSubmitAndClose}
+    disabled={!canSubmit || submitting || isDialing}
+    className="w-full md:w-1/2 rounded-xl border border-white/10 bg-slate-950/20 px-4 py-3
+               text-slate-100 font-semibold hover:bg-slate-950/35 transition disabled:opacity-50"
+  >
+    {submitting ? "Saving..." : "Submit & Close"}
+  </button>
+
+  {/* SMS + WhatsApp */}
+  <div className="w-full md:w-1/2 flex gap-3">
+    {/* Send SMS */}
     <button
-      onClick={handleSubmitAndClose}
-      disabled={!canSubmit || submitting || isDialing}
-      className="w-full md:w-1/2 rounded-xl border border-white/10 bg-slate-950/20 px-4 py-3
-                 text-slate-100 font-semibold hover:bg-slate-950/35 transition disabled:opacity-50"
+      onClick={handleSendSMS}
+      // disabled={!phoneNumber}
+      disabled={true}
+      className="flex-1 flex items-center justify-center gap-2
+                 rounded-xl px-4 py-3 font-semibold
+                 bg-blue-600 text-white
+                 hover:bg-blue-700 transition disabled:opacity-40"
     >
-      {submitting ? "Saving..." : "Submit & Close"}
+      <MessageSquare size={18} strokeWidth={2.2} />
+      <span>SMS</span>
     </button>
 
     {/* WhatsApp */}
     <button
-  onClick={handleWhatsApp}
-  // disabled={!phoneNumber}
-  disabled={true}
-  className="w-full md:w-1/2 flex items-center justify-center gap-2
-             rounded-xl px-4 py-3 font-semibold
-             bg-[#25D366] text-white
-             hover:bg-[#1EBE5D]
-             transition disabled:opacity-40"
->
-  <MessageCircle size={18} strokeWidth={2.2} />
-  <span>WhatsApp</span>
-</button>
+      onClick={handleWhatsApp}
+      // disabled={!phoneNumber}
+      disabled={true}
+      className="flex-1 flex items-center justify-center gap-2
+                 rounded-xl px-4 py-3 font-semibold
+                 bg-[#25D366] text-white
+                 hover:bg-[#1EBE5D] transition disabled:opacity-40"
+    >
+      <MessageCircle size={18} strokeWidth={2.2} />
+      <span>WhatsApp</span>
+    </button>
+  </div>
+
     {/* {!isCallbackDialed && <button
               onClick={handleWrapAndNext}
               disabled={!canSubmit || submitting }

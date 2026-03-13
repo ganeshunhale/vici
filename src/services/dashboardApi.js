@@ -1,6 +1,7 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import { showSessionPopup } from '../slices/sessionSlice.js';
 
+
 const baseQuery = fetchBaseQuery({
   baseUrl: "http://192.168.15.61:8000",
   prepareHeaders: (headers) => {
@@ -203,7 +204,7 @@ export const dashboardApi = createApi({
 
     submitStatus: builder.mutation({
       query: (params = {}) => ({
-        url: "/vicidial-agent",
+        url: "/submit_status",
         method: "POST",
         params: Object.keys(params).length ? params : undefined,
       }),
@@ -238,6 +239,14 @@ export const dashboardApi = createApi({
     statusData: builder.query({
       query: () => "/status_data",
     }),
+    sendMessage: builder.mutation({
+      query: (phone ) => ({
+        url: "/send-sms",
+        method: "POST",
+        body: { phone_number: phone }
+      }),
+      invalidatesTags: ["Leads"],
+    }),
   }),
 });
 
@@ -267,5 +276,6 @@ export const {
   useUserTimelineQuery,
   useGetCampaignsQuery,
   useDeleteLeadMutation,
-  useStatusDataQuery
+  useStatusDataQuery,
+  useSendMessageMutation
 } = dashboardApi;
